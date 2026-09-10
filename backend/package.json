@@ -1,0 +1,30 @@
+{
+  "name": "@nha-hoa/backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "db:setup": "tsx src/setup.ts",
+    "test": "tsx --test src/*.test.ts"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.3.0",
+    "express": "^5.2.0",
+    "express-rate-limit": "^8.2.0",
+    "helmet": "^8.1.0",
+    "mongodb": "^7.6.0",
+    "zod": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.0"
+  }
+}

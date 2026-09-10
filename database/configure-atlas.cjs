@@ -1,0 +1,16 @@
+const fs=require('node:fs');
+const {parse}=require('dotenv');
+const source=process.argv[2];
+if(!source)throw new Error('Pass the path to the Atlas credentials .env file.');
+const credentials=parse(fs.readFileSync(source));
+let uri=credentials.MONGODB_URI;
+if(!/^mongodb(?:\+srv)?:\/\//.test(uri||''))throw new Error('Missing valid MONGODB_URI.');
+uri=uri.replace(/<username>/g,encodeURIComponent(credentials.MONGODB_USERNAME||'')).replace(/<(?:password|db_password)>/g,encodeURIComponent(credentials.MONGODB_PASSWORD||''));
+if(/[<>]/.test(uri))throw new Error('MongoDB URI still contains placeholders.');
+const target='backend/.env';
+const old=parse(fs.readFileSync(target));
+fs.mkdirSync('.local',{recursive:true});
+if(!fs.existsSync('.local/backend-mysql.env'))fs.copyFileSync(target,'.local/backend-mysql.env');
+const values={PORT:old.PORT||'4000',MONGODB_URI:uri,MONGODB_DB_NAME:'nha_hoa',FRONTEND_ORIGIN:old.FRONTEND_ORIGIN,ADMIN_EMAIL:old.ADMIN_EMAIL,ADMIN_PASSWORD:old.ADMIN_PASSWORD,NODE_ENV:old.NODE_ENV||'development'};
+fs.writeFileSync(target,Object.entries(values).map(([key,value])=>`${key}=${JSON.stringify(value||'')}`).join('\n')+'\n');
+console.log('Atlas configuration saved to backend/.env. Previous configuration preserved privately.');

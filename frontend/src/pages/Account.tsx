@@ -1,0 +1,353 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  ArrowUpRight,
+  Flower2,
+  LogOut,
+  Package,
+  Check,
+  Truck,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import { api, post, money, statuses, type User, type Order } from "../types";
+import { useStore } from "../store";
+import { PageHeading, Empty, ButtonLink } from "../components";
+export function Auth({ register = false }: { register?: boolean }) {
+  const { setUser, user, authLoading } = useStore();
+  const [params] = useSearchParams();
+  const next = params.get("next");
+  const destination =
+    next?.startsWith("/") && !next.startsWith("//") ? next : "/tai-khoan";
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [show, setShow] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (user && !authLoading) navigate(destination, { replace: true });
+  }, [user, authLoading, destination, navigate]);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api<User>(
+        "/auth/" + (register ? "register" : "login"),
+        post(form),
+      );
+      setUser(result);
+      navigate(destination);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="auth-layout">
+      <div className="auth-visual">
+        <img src="/images/pink.jpg" alt="Những cánh hoa hồng mềm mại" />
+        <div>
+          <span className="eyebrow">NHÀ HOA — GỬI TRỌN ĐIỀU THƯƠNG</span>
+          <h2>
+            Một nơi lưu giữ
+            <br />
+            những điều <em>đẹp đẽ.</em>
+          </h2>
+        </div>
+      </div>
+      <div className="auth-form">
+        <Flower2 size={36} strokeWidth={1} />
+        <span className="eyebrow">CHÀO BẠN ĐẾN VỚI NHÀ</span>
+        <h1>
+          {register ? "Thêm một người thương." : "Thật vui khi gặp lại bạn."}
+        </h1>
+        <p>
+          {register
+            ? "Tạo tài khoản để lưu lại những bó hoa và đơn hàng của bạn."
+            : "Đăng nhập để tiếp tục gửi những điều yêu thương."}
+        </p>
+        <form onSubmit={submit}>
+          {register && (
+            <label className="field">
+              Tên của bạn
+              <input
+                autoComplete="name"
+                required
+                minLength={2}
+                maxLength={100}
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </label>
+          )}
+          <label className="field">
+            Email
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            Mật khẩu
+            <span className="password-input">
+              <input
+                type={show ? "text" : "password"}
+                required
+                minLength={8}
+                maxLength={128}
+                autoComplete={register ? "new-password" : "current-password"}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+              />
+              <button
+                type="button"
+                className="icon-button"
+                aria-label={show ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                onClick={() => setShow(!show)}
+              >
+                {show ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </span>
+            {register && <small>Ít nhất 8 ký tự.</small>}
+          </label>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="button" disabled={busy}>
+            {busy ? "Đang xử lý…" : register ? "Tạo tài khoản" : "Đăng nhập"}
+            <ArrowUpRight size={18} />
+          </button>
+        </form>
+        <p>
+          {register ? "Đã là người nhà? " : "Bạn chưa có tài khoản? "}
+          <Link
+            className="inline-link"
+            to={
+              (register ? "/dang-nhap" : "/dang-ky") +
+              "?next=" +
+              encodeURIComponent(destination)
+            }
+          >
+            {register ? "Đăng nhập" : "Đăng ký ngay"}
+          </Link>
+        </p>
+      </div>
+    </section>
+  );
+}
+export function Account() {
+  const { user, setUser, authLoading } = useStore();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (user)
+      api<Order[]>("/orders")
+        .then(setOrders)
+        .catch((e) => setError(e.message))
+        .finally(() => setLoading(false));
+  }, [user]);
+  if (authLoading)
+    return (
+      <p className="wrap section" role="status">
+        Đang tải tài khoản…
+      </p>
+    );
+  if (!user)
+    return (
+      <Empty
+        title="Chào bạn đến với Nhà"
+        text="Đăng nhập để xem những đơn hoa đã gửi."
+        to="/dang-nhap"
+        action="Đăng nhập"
+      />
+    );
+  const logout = async () => {
+    try {
+      await api("/auth/logout", post({}));
+      setUser(null);
+      navigate("/");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  return (
+    <>
+      <PageHeading
+        eyebrow="GÓC NHÀ CỦA BẠN"
+        title={"Chào " + user.name + "."}
+        description="Những yêu thương bạn đã gửi, Nhà Hoa giữ ở đây."
+      />
+      <section className="wrap section-bottom">
+        <div className="account-bar">
+          <span>{user.email}</span>
+          <div>
+            {user.role === "admin" && (
+              <ButtonLink to="/quan-tri">Quản trị cửa hàng</ButtonLink>
+            )}
+            <button className="button outline small" onClick={logout}>
+              <LogOut size={16} />
+              Đăng xuất
+            </button>
+          </div>
+        </div>
+        <h2>Đơn hoa của bạn</h2>
+        {error && (
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+        )}
+        {loading ? (
+          <p role="status">Đang tải đơn hoa…</p>
+        ) : orders.length ? (
+          <div className="orders-list">
+            {orders.map((o) => (
+              <article className="order-card" key={o.id}>
+                <Package strokeWidth={1} />
+                <div>
+                  <strong>{o.id}</strong>
+                  <p>
+                    Giao ngày {o.delivery_date} · {o.recipient}
+                  </p>
+                </div>
+                <span className={"status-badge " + o.status}>
+                  {statuses[o.status]}
+                </span>
+                <strong>{money(o.total)}</strong>
+                <Link className="text-link" to={"/tra-cuu?ma=" + o.id}>
+                  Chi tiết <ArrowUpRight size={16} />
+                </Link>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <Empty
+            title="Chưa có đơn hoa nào"
+            text="Gửi bó hoa đầu tiên, bắt đầu một câu chuyện đẹp."
+          />
+        )}
+      </section>
+    </>
+  );
+}
+export function Tracking() {
+  const [params] = useSearchParams();
+  const { user } = useStore();
+  const [id, setId] = useState(params.get("ma") || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [order, setOrder] = useState<Order | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setOrder(null);
+    try {
+      setOrder(
+        await api<Order>(
+          "/orders/track",
+          post({ id: id.trim().toUpperCase(), email: email.trim() }),
+        ),
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const steps = ["pending", "confirmed", "preparing", "shipping", "delivered"];
+  return (
+    <>
+      <PageHeading
+        eyebrow="DÕI THEO YÊU THƯƠNG"
+        title="Bó hoa của bạn đang ở đâu?"
+        description="Nhập mã đơn hoa và email đã dùng khi đặt hàng."
+      />
+      <section className="tracking-wrap wrap section-bottom">
+        <form onSubmit={submit} className="tracking-form">
+          <label className="field">
+            Mã đơn hoa
+            <input
+              required
+              value={id}
+              onChange={(e) => setId(e.target.value)}
+              placeholder="NH…"
+              pattern="[Nn][Hh][a-fA-F0-9]{10}"
+            />
+          </label>
+          <label className="field">
+            Email đặt hàng
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <button className="button" disabled={busy}>
+            {busy ? "Đang tìm đơn hoa…" : "Tra cứu đơn hoa"}
+            <ArrowUpRight size={18} />
+          </button>
+        </form>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        {order && (
+          <div className="tracking-result">
+            <div className="section-heading">
+              <h2>{order.id}</h2>
+              <span className={"status-badge " + order.status}>
+                {statuses[order.status]}
+              </span>
+            </div>
+            {order.status !== "cancelled" && (
+              <ol className="tracking-steps">
+                {steps.map((step, i) => (
+                  <li
+                    className={steps.indexOf(order.status) >= i ? "done" : ""}
+                    key={step}
+                  >
+                    <span>
+                      {steps.indexOf(order.status) >= i ? (
+                        <Check size={16} />
+                      ) : (
+                        i + 1
+                      )}
+                    </span>
+                    <strong>{statuses[step]}</strong>
+                  </li>
+                ))}
+              </ol>
+            )}
+            <p>
+              Ngày giao dự kiến: <strong>{order.delivery_date}</strong>
+            </p>
+            {order.items?.map((i, index) => (
+              <div className="tracking-item" key={index}>
+                <img src={i.image} alt={i.name} />
+                <span>
+                  {i.name} × {i.quantity}
+                </span>
+                <strong>{money(i.price * i.quantity)}</strong>
+              </div>
+            ))}
+            <p className="tracking-total">
+              Tổng thanh toán: <strong>{money(order.total)}</strong>
+            </p>
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
