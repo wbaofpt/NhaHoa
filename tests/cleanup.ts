@@ -53,6 +53,12 @@ export default async function cleanup() {
             { session },
           );
         await db
+          .collection("favorites")
+          .deleteMany(
+            { user_id: { $in: users.map((u) => u.id) } },
+            { session },
+          );
+        await db
           .collection("users")
           .deleteMany({ _id: { $in: users.map((u) => u._id) } }, { session });
         await db

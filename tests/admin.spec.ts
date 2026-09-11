@@ -22,6 +22,6 @@ test("admin can sign in and edit a flower through the interface", async ({
   await expect(
     page.getByRole("status").filter({ hasText: "Đã lưu mẫu hoa." }),
   ).toBeVisible();
-  await page.evaluate(() => window.scrollTo({top:0,behavior:'instant'}));
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await page.screenshot({ path: ".local/admin.png", fullPage: true });
 });

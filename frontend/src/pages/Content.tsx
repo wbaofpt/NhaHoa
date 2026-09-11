@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowUpRight, Flower2, Leaf, Heart, Clock, Send } from "lucide-react";
 import { PageHeading, ButtonLink, Botanical, Empty } from "../components";
 import { api, post } from "../types";
+import { collections, services, extraArticles } from "../editorial";
+import { SupportBanner } from "./Explore";
 export const articles = [
+  ...extraArticles,
   {
     slug: "giu-hoa-tuoi-lau",
     image: "tulip",
@@ -80,42 +83,11 @@ export function Collections() {
         description="Bộ sưu tập được chọn cho những khoảnh khắc đáng nhớ của bạn."
       />
       <section className="collection-grid wrap section-bottom">
-        {[
-          {
-            name: "Một ngày rực rỡ",
-            occasion: "Sinh nhật",
-            image: "pink",
-            text: "Mừng thêm một tuổi, thêm một hành trình đẹp.",
-          },
-          {
-            name: "Thương, không cần nói",
-            occasion: "Tình yêu",
-            image: "rose",
-            text: "Những sắc hoa nói thay lời từ trái tim.",
-          },
-          {
-            name: "Chạm một khởi đầu",
-            occasion: "Chúc mừng",
-            image: "sunshine",
-            text: "Cho tốt nghiệp, khai trương và những cột mốc mới.",
-          },
-          {
-            name: "Điều nhỏ chân thành",
-            occasion: "Cảm ơn",
-            image: "garden",
-            text: "Gửi lời cảm ơn đến người luôn ở bên.",
-          },
-          {
-            name: "Ngày mình chung đôi",
-            occasion: "Ngày cưới",
-            image: "peony",
-            text: "Dịu dàng đi cùng khoảnh khắc trăm năm.",
-          },
-        ].map((c) => (
+        {collections.map((c) => (
           <Link
             className="collection-card"
             key={c.occasion}
-            to={"/hoa?dip=" + encodeURIComponent(c.occasion)}
+            to={"/bo-suu-tap/" + c.slug}
           >
             <img
               src={"/images/" + c.image + ".jpg"}
@@ -133,6 +105,7 @@ export function Collections() {
           </Link>
         ))}
       </section>
+      <SupportBanner />
     </>
   );
 }
@@ -206,6 +179,25 @@ export function About() {
   );
 }
 export function Blog() {
+  const [params, setParams] = useSearchParams();
+  const query = params.get("q") || "";
+  const category = params.get("chu-de") || "";
+  const normalize = (text: string) =>
+    text
+      .toLocaleLowerCase("vi")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d");
+  const shown = articles.filter(
+    (a) =>
+      (!category || a.category === category) &&
+      normalize(a.title + " " + a.intro).includes(normalize(query)),
+  );
+  const update = (key: string, value: string) => {
+    const next = new URLSearchParams(params);
+    value ? next.set(key, value) : next.delete(key);
+    setParams(next, { replace: true });
+  };
   return (
     <>
       <PageHeading
@@ -213,8 +205,42 @@ export function Blog() {
         title="Chuyện hoa, chuyện đời."
         description="Một chút kiến thức, một chút cảm hứng. Cùng sống chậm với hoa."
       />
+      <div className="content-filters wrap">
+        <label className="field">
+          Tìm câu chuyện
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => update("q", e.target.value)}
+            placeholder="Sinh nhật, lời thiệp, chăm hoa…"
+          />
+        </label>
+        <div className="field">
+          <label htmlFor="article-category">Chủ đề</label>
+          <select
+            id="article-category"
+            value={category}
+            onChange={(e) => update("chu-de", e.target.value)}
+          >
+            <option value="">Tất cả chủ đề</option>
+            {Array.from(new Set(articles.map((a) => a.category))).map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+        <p role="status">{shown.length} câu chuyện</p>
+      </div>
+      {!shown.length && (
+        <div className="prose wrap section-bottom">
+          <h2>Chưa tìm thấy câu chuyện phù hợp</h2>
+          <p>Thử một từ khóa ngắn hơn hoặc chọn lại chủ đề.</p>
+          <button className="button outline" onClick={() => setParams({})}>
+            Xóa bộ lọc
+          </button>
+        </div>
+      )}
       <section className="journal-grid wrap section-bottom">
-        {articles.map((a) => (
+        {shown.map((a) => (
           <Link
             className="journal-card"
             key={a.slug}
@@ -223,7 +249,7 @@ export function Blog() {
             <div>
               <img src={"/images/" + a.image + ".jpg"} alt="" />
             </div>
-            <span className="eyebrow">{a.category} · 5 PHÚT ĐỌC</span>
+            <span className="eyebrow">{a.category} · 3 PHÚT ĐỌC</span>
             <h2>{a.title}</h2>
             <p>{a.intro}</p>
             <span className="text-link">
@@ -257,7 +283,7 @@ export function Article() {
           alt={a.title}
         />
         <p className="muted">
-          Biên soạn bởi Nhà Hoa · <Clock size={14} /> 5 phút đọc
+          Biên soạn bởi Nhà Hoa · <Clock size={14} /> 3 phút đọc
         </p>
         {a.sections.map(([title, body]) => (
           <section key={title}>
@@ -268,14 +294,51 @@ export function Article() {
         <div className="article-end">
           <Flower2 />
           <p>Cảm ơn bạn đã dừng lại một chút cùng Nhà Hoa.</p>
+          <Link className="text-link" to="/cham-soc-hoa">
+            Mở cẩm nang chăm hoa
+          </Link>
           <ButtonLink to="/hoa">Mang chút hoa về nhà</ButtonLink>
         </div>
       </article>
+      <section className="wrap section-bottom">
+        <h2>Đọc thêm cùng Nhà</h2>
+        <div className="journal-grid">
+          {articles
+            .filter((item) => item.slug !== a.slug)
+            .slice(0, 3)
+            .map((item) => (
+              <Link
+                className="journal-card"
+                key={item.slug}
+                to={"/chuyen-nha-hoa/" + item.slug}
+              >
+                <div>
+                  <img
+                    src={"/images/" + item.image + ".jpg"}
+                    alt=""
+                    loading="lazy"
+                  />
+                </div>
+                <span className="eyebrow">{item.category}</span>
+                <h3>{item.title}</h3>
+                <p>{item.intro}</p>
+              </Link>
+            ))}
+        </div>
+      </section>
     </>
   );
 }
 export function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [params] = useSearchParams();
+  const requested = services.find((s) => s.slug === params.get("dich-vu"));
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    message: requested
+      ? `Mình muốn được tư vấn: ${requested.name}.\nNgày cần hoa: \nNgân sách dự kiến: \nĐịa điểm và mong muốn: `
+      : "",
+  });
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -371,6 +434,13 @@ export function Contact() {
               {result}
             </p>
           )}
+          <p className="muted">
+            Thông tin được dùng để trả lời yêu cầu. Xem{" "}
+            <Link className="inline-link" to="/chinh-sach/bao-mat">
+              chính sách bảo mật
+            </Link>
+            . Vui lòng không gửi mật khẩu hoặc thông tin thẻ.
+          </p>
           <button className="button" disabled={busy}>
             {busy ? "Đang gửi…" : "Gửi lời nhắn cho Nhà"}
             <Send size={17} />
@@ -381,6 +451,31 @@ export function Contact() {
   );
 }
 const faqs = [
+  [
+    "Tính năng nào cần tài khoản?",
+    "Bạn có thể xem hoa và thêm vào giỏ mà chưa đăng nhập. Thanh toán, lưu yêu thích và xem đơn hàng cần tài khoản. Sau khi đăng nhập, bạn quay lại trang đang dùng với giỏ còn nguyên.",
+  ],
+  [
+    "Phí giao được tính thế nào?",
+    "Phí giao là 35.000đ; đơn có tiền hoa từ 800.000đ được miễn phí giao. Tổng tiền được hiển thị trong giỏ và ở bước thanh toán để bạn kiểm tra trước khi đặt.",
+  ],
+  [
+    "Làm sao xem lại mã đơn?",
+    "Đăng nhập tài khoản đã đặt rồi vào Tài khoản. Danh sách đơn có mã và liên kết Chi tiết để tra cứu. Bạn không thể tra cứu đơn thuộc tài khoản khác chỉ bằng mã và email.",
+  ],
+  [
+    "Giỏ hoa và yêu thích có được lưu không?",
+    "Giỏ được lưu trên trình duyệt đang dùng; xóa dữ liệu trình duyệt sẽ xóa giỏ. Yêu thích được lưu theo tài khoản và có thể xem khi đăng nhập trên thiết bị khác.",
+  ],
+  [
+    "Tôi quên mật khẩu thì làm gì?",
+    "Website chưa hỗ trợ đặt lại mật khẩu tự động qua email. Bạn có thể gửi yêu cầu hỗ trợ qua Liên hệ; không gửi mật khẩu cũ. Nếu còn đăng nhập và biết mật khẩu hiện tại, dùng trang Bảo mật tài khoản để đổi.",
+  ],
+  [
+    "Có đặt hoa theo ngân sách hoặc cho sự kiện không?",
+    "Ghé trang Dịch vụ để xem hoa theo yêu cầu, hoa cưới và hoa doanh nghiệp. Gửi ngày, địa điểm, số lượng và ngân sách; Nhà Hoa trao đổi phương án trước khi xác nhận nhận làm.",
+  ],
+
   [
     "Nhà Hoa giao hoa ở đâu?",
     "Hiện tại Nhà Hoa nhận giao trong khu vực TP. Hồ Chí Minh. Khi nhận đơn, chúng mình sẽ liên hệ xác nhận địa chỉ và giờ giao cụ thể.",
@@ -407,10 +502,20 @@ const faqs = [
   ],
   [
     "Nếu hoa bị hỏng khi nhận thì sao?",
-    "Vui lòng chụp ảnh tình trạng hoa và gửi yêu cầu qua trang Liên hệ trong 24 giờ từ khi nhận. Nhà Hoa sẽ kiểm tra và trao đổi phương án thay thế hoặc hoàn tiền phù hợp.",
+    "Lưu ảnh tình trạng hoa và gửi mô tả kèm mã đơn qua Liên hệ trong 24 giờ từ khi nhận. Biểu mẫu chưa hỗ trợ tải ảnh; Nhà Hoa sẽ trao đổi cách nhận ảnh khi phản hồi và thống nhất phương án xử lý sau khi kiểm tra.",
   ],
 ];
 export function FAQ() {
+  const [query, setQuery] = useState("");
+  const normalize = (text: string) =>
+    text
+      .toLocaleLowerCase("vi")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d");
+  const shown = faqs.filter(([q, a]) =>
+    normalize(q + " " + a).includes(normalize(query)),
+  );
   return (
     <>
       <PageHeading
@@ -419,7 +524,21 @@ export function FAQ() {
         description="Để bạn yên tâm gửi đi một bó yêu thương."
       />
       <section className="prose wrap section-bottom">
-        {faqs.map(([q, a]) => (
+        <label className="field">
+          Tìm câu trả lời
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Thử: phí giao, tài khoản, mật khẩu…"
+          />
+        </label>
+        <p role="status">
+          {shown.length
+            ? `${shown.length} câu trả lời`
+            : "Chưa có câu trả lời phù hợp. Thử từ khóa khác hoặc nhắn cho Nhà bên dưới."}
+        </p>
+        {shown.map(([q, a]) => (
           <details key={q}>
             <summary>{q}</summary>
             <p>{a}</p>
@@ -446,6 +565,14 @@ const policies: Record<string, { title: string; sections: string[][] }> = {
         "Liên hệ Nhà Hoa kèm mã đơn sớm nhất có thể. Yêu cầu sẽ được kiểm tra theo tiến độ chuẩn bị thực tế. Đơn đang giao hoặc đã giao không thể hủy trực tiếp.",
       ],
       [
+        "Ngày giao và người nhận",
+        "Ngày bạn chọn là ngày giao mong muốn. Khả năng phục vụ còn phụ thuộc nguồn hoa, thời điểm đặt và địa chỉ. Vui lòng cung cấp số điện thoại liên lạc được; nếu người nhận vắng mặt hoặc cần đổi địa chỉ, Nhà Hoa sẽ trao đổi lại phương án trước khi tiếp tục.",
+      ],
+      [
+        "Nhận hoa và thanh toán",
+        "Kiểm tra tên người nhận, mẫu hoa và tình trạng bao gói khi nhận. Thanh toán COD theo tổng tiền đã được xác nhận. Với yêu cầu giao bất ngờ, hãy trao đổi trước để làm rõ ai là người thanh toán.",
+      ],
+      [
         "Chất lượng khi nhận",
         "Nếu hoa hư hỏng khi nhận, hãy lưu ảnh và gửi phản ánh trong 24 giờ qua trang Liên hệ. Nhà Hoa sẽ xác minh, thống nhất việc thay thế hoặc hoàn tiền trước khi xử lý.",
       ],
@@ -464,11 +591,19 @@ const policies: Record<string, { title: string; sections: string[][] }> = {
       ],
       [
         "Cookie và lưu trữ trình duyệt",
-        "Cookie phiên đăng nhập giúp duy trì tài khoản. Giỏ hàng và danh sách yêu thích được lưu trong trình duyệt của bạn.",
+        "Cookie phiên đăng nhập giúp duy trì tài khoản. Giỏ hàng được lưu trong trình duyệt; danh sách yêu thích được lưu theo tài khoản trong cơ sở dữ liệu để bạn dùng trên nhiều thiết bị.",
       ],
       [
         "Yêu cầu về dữ liệu",
         "Bạn có thể gửi yêu cầu truy cập, chỉnh sửa hoặc xóa thông tin qua trang Liên hệ bằng email liên quan. Nhà Hoa sẽ xác minh trước khi thực hiện.",
+      ],
+      [
+        "Giữ an toàn tài khoản",
+        "Không chia sẻ mật khẩu hoặc dùng chung phiên đăng nhập trên thiết bị công cộng. Trang Bảo mật tài khoản cho phép đổi mật khẩu và đăng xuất mọi thiết bị. Nhà Hoa không yêu cầu bạn gửi mật khẩu qua biểu mẫu liên hệ.",
+      ],
+      [
+        "Thông tin người được tặng hoa",
+        "Khi nhập thông tin người nhận khác mình, bạn cần bảo đảm có cơ sở phù hợp để cung cấp thông tin đó cho việc giao hoa. Chỉ gửi những thông tin cần thiết; tránh đưa thông tin riêng tư nhạy cảm vào lời thiệp hoặc ghi chú.",
       ],
     ],
   },
@@ -490,6 +625,14 @@ const policies: Record<string, { title: string; sections: string[][] }> = {
       [
         "Hỗ trợ",
         "Mọi thắc mắc về đơn, thay đổi hoa hoặc chất lượng được tiếp nhận qua trang Liên hệ. Vui lòng cung cấp mã đơn và email để được hỗ trợ.",
+      ],
+      [
+        "Tài khoản và lịch sử mua hàng",
+        "Đặt hàng, lưu yêu thích và tra cứu đơn yêu cầu đăng nhập. Bạn có trách nhiệm giữ an toàn tài khoản và kiểm tra lại thông tin trước khi gửi đơn. Mã đơn được lưu tại trang Tài khoản.",
+      ],
+      [
+        "Yêu cầu thiết kế riêng",
+        "Nội dung trên trang Dịch vụ là thông tin tư vấn. Gửi biểu mẫu không tự tạo đơn mua hàng hoặc xác nhận lịch phục vụ. Mẫu, hạng mục, chi phí và phương thức thực hiện cần được thống nhất riêng trước khi tiến hành.",
       ],
     ],
   },

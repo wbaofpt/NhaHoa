@@ -1,4 +1,5 @@
 {
+  "favorites": [{ "key": { "user_id": 1, "product_id": 1 }, "unique": true }],
   "users": [
     { "key": { "id": 1 }, "unique": true },
     { "key": { "email": 1 }, "unique": true }

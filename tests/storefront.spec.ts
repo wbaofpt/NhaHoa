@@ -1,5 +1,14 @@
 import { test, expect } from "@playwright/test";
+async function registerMember(page: import("@playwright/test").Page) {
+  const email = `test-ui-${Date.now()}@example.com`;
+  const response = await page.request.post("/api/auth/register", {
+    data: { name: "Khách kiểm thử API", email, password: "TestPassword123!" },
+  });
+  expect(response.status()).toBe(201);
+  return email;
+}
 test("home, product search, favorites and cart persist", async ({ page }) => {
+  await registerMember(page);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
@@ -19,6 +28,9 @@ test("home, product search, favorites and cart persist", async ({ page }) => {
     .fill("nang tho");
   await expect(page.locator(".product-card")).toHaveCount(1);
   await page.getByRole("button", { name: "Yêu thích Nàng thơ" }).click();
+  await expect(
+    page.getByRole("button", { name: "Yêu thích Nàng thơ" }),
+  ).toHaveAttribute("aria-pressed", "true");
   await page.goto("/yeu-thich");
   await expect(page.locator(".product-card")).toHaveCount(1);
   await page.getByRole("heading", { name: "Nàng thơ" }).click();
@@ -83,7 +95,7 @@ test("mobile menu and public pages have no horizontal overflow", async ({
   });
   await page.screenshot({ path: ".local/home-mobile.png", fullPage: true });
 });
-test("guest checkout creates a real order and tracking finds it", async ({
+test("checkout requires login, preserves cart and tracks a member order", async ({
   page,
 }) => {
   await page.goto("/hoa/som-mai");
@@ -92,6 +104,17 @@ test("guest checkout creates a real order and tracking finds it", async ({
     .getByRole("button", { name: "Thêm vào giỏ hoa", exact: true })
     .click();
   await page.goto("/thanh-toan");
+  await expect(page).toHaveURL(/dang-nhap\?next=/);
+  await page.getByRole("link", { name: "Đăng ký ngay", exact: true }).click();
+  await page.getByLabel("Tên của bạn").fill("Khách kiểm thử API");
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill(`test-ui-${Date.now()}@example.com`);
+  await page.getByLabel("Mật khẩu", { exact: true }).fill("TestPassword123!");
+  await page
+    .getByRole("button", { name: "Tạo tài khoản", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/thanh-toan$/);
   await page.getByLabel("Tên người nhận").fill("Khách kiểm thử tự động");
   await page.getByLabel("Số điện thoại").fill("0901234567");
   await page.getByLabel("Email nhận thông tin đơn").fill("e2e@example.com");

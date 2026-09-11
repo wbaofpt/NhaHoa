@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkoutInput, totals, transitions, todayVN } from "./validation.js";
+import {
+  checkoutInput,
+  totals,
+  transitions,
+  todayVN,
+  registration,
+} from "./validation.js";
 test("shipping fee threshold and total are calculated using integer VND", () => {
   assert.deepEqual(totals([{ price: 350000, quantity: 2 }]), {
     subtotal: 700000,
@@ -23,6 +29,22 @@ const valid = {
   payment_method: "cod",
   items: [{ product_id: 1, quantity: 1 }],
 };
+test("registration requires a long password and rejects bcrypt truncation", () => {
+  const user = { name: "Khách kiểm thử", email: "test@example.com" };
+  assert.equal(
+    registration.safeParse({ ...user, password: "shortpass" }).success,
+    false,
+  );
+  assert.equal(
+    registration.safeParse({ ...user, password: "é".repeat(40) }).success,
+    false,
+  );
+  assert.equal(
+    registration.safeParse({ ...user, password: "My quiet garden blooms!" })
+      .success,
+    true,
+  );
+});
 test("checkout rejects zero, negative, excessive and duplicate quantities", () => {
   for (const quantity of [0, -1, 21, 1.5])
     assert.equal(

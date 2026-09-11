@@ -46,6 +46,11 @@ export default function Home() {
           <Botanical className="hero-botanical" />
         </div>
         <div className="hero-visual">
+          <div className="petal-scene" aria-hidden="true">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <span className={"petal petal-" + i} key={i} />
+            ))}
+          </div>
           <img
             className="hero-photo"
             src="/images/hero.jpg"

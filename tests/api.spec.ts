@@ -21,6 +21,7 @@ test("authentication, access control, server pricing, stock and cancellation", a
   expect(me.password_hash).toBeUndefined();
   expect((await request.get("/api/admin/orders")).status()).toBe(403);
   const admin = await playwright.request.newContext({
+    extraHTTPHeaders: { "X-NhaHoa-Request": "web" },
     baseURL: process.env.E2E_BASE_URL || "http://127.0.0.1:5174",
   });
   expect(

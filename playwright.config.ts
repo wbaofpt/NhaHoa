@@ -10,6 +10,7 @@ export default defineConfig({
   workers: 1,
   timeout: 45000,
   use: {
+    extraHTTPHeaders: { "X-NhaHoa-Request": "web" },
     baseURL: process.env.E2E_BASE_URL || "http://127.0.0.1:5174",
     headless: true,
     viewport: { width: 1440, height: 1000 },

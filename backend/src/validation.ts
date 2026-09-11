@@ -5,10 +5,26 @@ export const email = z
   .transform((v) => v.toLowerCase().trim());
 export const credentials = z.object({
   email,
-  password: z.string().min(8).max(128),
+  password: z
+    .string()
+    .min(8)
+    .max(128)
+    .refine(
+      (v) => Buffer.byteLength(v, "utf8") <= 72,
+      "Mật khẩu không được vượt quá 72 byte UTF-8.",
+    ),
 });
+export const newPassword = z
+  .string()
+  .min(15, "Mật khẩu cần ít nhất 15 ký tự.")
+  .max(72)
+  .refine(
+    (v) => Buffer.byteLength(v, "utf8") <= 72,
+    "Mật khẩu không được vượt quá 72 byte UTF-8.",
+  );
 export const registration = credentials.extend({
   name: z.string().trim().min(2).max(100),
+  password: newPassword,
 });
 export const productInput = z.object({
   name: z.string().trim().min(2).max(150),

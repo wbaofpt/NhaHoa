@@ -9,6 +9,8 @@ import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import { randomBytes, createHash } from "node:crypto";
 import { ZodError, z } from "zod";
+import { protectWrites } from "./security.js";
+import { fileURLToPath } from "node:url";
 import {
   client,
   db,
@@ -18,6 +20,7 @@ import {
   sessions,
   inquiries,
   subscribers,
+  favorites,
   nextId,
   transaction,
   publicFields,
@@ -33,29 +36,38 @@ import {
   email,
   totals,
   transitions,
+  newPassword,
 } from "./validation.js";
 const app = express();
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        "img-src": ["'self'", "data:", "https:"],
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com",
+        ],
+        "font-src": ["'self'", "https://fonts.gstatic.com"],
+        "frame-ancestors": ["'none'"],
+      },
+    },
+  }),
+);
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 const origins = new Set([
   process.env.FRONTEND_ORIGIN || "http://127.0.0.1:5173",
   ...(process.env.NODE_ENV === "production" ? [] : ["http://localhost:5173"]),
 ]);
-app.use("/api", (req, res, next) => {
-  if (
-    !["GET", "HEAD", "OPTIONS"].includes(req.method) &&
-    req.headers.origin &&
-    !origins.has(req.headers.origin)
-  )
-    return res.status(403).json({ error: "Nguồn yêu cầu không được phép." });
-  next();
-});
+app.use("/api", protectWrites(origins));
 app.use(
   "/api",
   rateLimit({
     windowMs: 60000,
-    limit: 180,
+    // Browser suites share one IP and load many pages; retain real limits outside isolated tests.
+    limit: process.env.NODE_ENV==='test'&&db.databaseName.endsWith('_test')?1000:180,
     standardHeaders: "draft-8",
     legacyHeaders: false,
     message: { error: "Quá nhiều yêu cầu. Vui lòng thử lại sau một phút." },
@@ -66,6 +78,37 @@ const authLimiter = rateLimit({
   limit: 30,
   message: { error: "Vui lòng thử đăng nhập lại sau 15 phút." },
 });
+const accountLimiter = rateLimit({
+  windowMs: 15 * 60000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) =>
+    "account:" +
+    hash(
+      typeof req.body?.email === "string"
+        ? req.body.email.trim().toLowerCase()
+        : "invalid",
+    ),
+  message: {
+    error: "Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau 15 phút.",
+  },
+});
+const messageLimiter = rateLimit({
+  windowMs: 15 * 60000,
+  limit: 10,
+  message: { error: "Bạn đã gửi nhiều yêu cầu. Vui lòng thử lại sau 15 phút." },
+});
+const orderLimiter = rateLimit({
+  windowMs: 15 * 60000,
+  limit: 20,
+  message: { error: "Vui lòng chờ trước khi tạo thêm đơn hoa." },
+});
+const passwordLimiter = rateLimit({
+  windowMs: 15 * 60000,
+  limit: 5,
+  message: { error: "Vui lòng thử thay đổi bảo mật sau 15 phút." },
+});
+const dummyPasswordHash = bcrypt.hashSync(randomBytes(24).toString("hex"), 12);
 type PublicUser = Pick<User, "id" | "name" | "email" | "role">;
 declare global {
   namespace Express {
@@ -91,7 +134,11 @@ app.use("/api", async (req, _res, next) => {
       });
       if (record) {
         const user = await users.findOne({ id: record.user_id });
-        if (user) req.user = publicUser(user);
+        if (
+          user &&
+          (record.session_version || 0) === (user.session_version || 0)
+        )
+          req.user = publicUser(user);
       }
     }
     next();
@@ -105,10 +152,13 @@ const admin = (req: Request, res: Response, next: NextFunction) =>
   req.user?.role === "admin"
     ? next()
     : res.status(403).json({ error: "Bạn không có quyền quản trị." });
-async function createSession(res: Response, user: PublicUser) {
+async function createSession(res: Response, user: User, previous?: unknown) {
+  if (typeof previous === "string")
+    await sessions.deleteOne({ token_hash: hash(previous) });
   const token = randomBytes(32).toString("hex");
   await sessions.insertOne({
     token_hash: hash(token),
+    session_version: user.session_version || 0,
     user_id: user.id,
     expires_at: new Date(Date.now() + 604800000),
   });
@@ -153,15 +203,19 @@ app.post("/api/auth/register", authLimiter, async (req, res) => {
     created_at: new Date(),
   };
   await users.insertOne(user);
-  await createSession(res, user);
+  await createSession(res, user, req.cookies.session);
   res.status(201).json(publicUser(user));
 });
-app.post("/api/auth/login", authLimiter, async (req, res) => {
+app.post("/api/auth/login", authLimiter, accountLimiter, async (req, res) => {
   const input = credentials.parse(req.body);
   const user = await users.findOne({ email: input.email });
-  if (!user || !(await bcrypt.compare(input.password, user.password_hash)))
+  const matches = await bcrypt.compare(
+    input.password,
+    user?.password_hash || dummyPasswordHash,
+  );
+  if (!user || !matches)
     return res.status(401).json({ error: "Email hoặc mật khẩu chưa đúng." });
-  await createSession(res, user);
+  await createSession(res, user, req.cookies.session);
   res.json(publicUser(user));
 });
 app.get("/api/auth/me", (req, res) => res.json(req.user || null));
@@ -171,7 +225,84 @@ app.post("/api/auth/logout", async (req, res) => {
   res.clearCookie("session", { path: "/" });
   res.json({ ok: true });
 });
-app.post("/api/orders", async (req, res) => {
+app.post(
+  "/api/auth/logout-all",
+  required,
+  passwordLimiter,
+  async (req, res) => {
+    await transaction(async (session) => {
+      await users.updateOne(
+        { id: req.user!.id },
+        { $inc: { session_version: 1 } },
+        { session },
+      );
+      await sessions.deleteMany({ user_id: req.user!.id }, { session });
+    });
+    res.clearCookie("session", { path: "/" });
+    res.json({ ok: true });
+  },
+);
+app.post("/api/auth/password", required, passwordLimiter, async (req, res) => {
+  const input = z
+    .object({ currentPassword: credentials.shape.password, newPassword })
+    .parse(req.body);
+  const user = await users.findOne({ id: req.user!.id });
+  if (
+    !user ||
+    !(await bcrypt.compare(input.currentPassword, user.password_hash))
+  )
+    return res.status(400).json({ error: "Mật khẩu hiện tại chưa đúng." });
+  if (input.currentPassword === input.newPassword)
+    return res
+      .status(400)
+      .json({ error: "Vui lòng chọn mật khẩu mới khác mật khẩu hiện tại." });
+  const password_hash = await bcrypt.hash(input.newPassword, 12);
+  await transaction(async (session) => {
+    const result = await users.updateOne(
+      { id: user.id, password_hash: user.password_hash },
+      { $set: { password_hash }, $inc: { session_version: 1 } },
+      { session },
+    );
+    if (!result.matchedCount)
+      throw new Conflict("Mật khẩu vừa được thay đổi. Vui lòng đăng nhập lại.");
+    await sessions.deleteMany({ user_id: user.id }, { session });
+  });
+  res.clearCookie("session", { path: "/" });
+  res.json({ ok: true });
+});
+app.get("/api/favorites", required, async (req, res) =>
+  res.json(
+    (
+      await favorites
+        .find({ user_id: req.user!.id })
+        .sort({ created_at: 1 })
+        .toArray()
+    ).map((f) => f.product_id),
+  ),
+);
+app.put("/api/favorites/:id", required, async (req, res) => {
+  const product_id = z.coerce.number().int().positive().parse(req.params.id);
+  if (!(await products.findOne({ id: product_id, active: true })))
+    return res.status(404).json({ error: "Không tìm thấy mẫu hoa." });
+  await favorites.updateOne(
+    { user_id: req.user!.id, product_id },
+    {
+      $setOnInsert: {
+        user_id: req.user!.id,
+        product_id,
+        created_at: new Date(),
+      },
+    },
+    { upsert: true },
+  );
+  res.json({ ok: true });
+});
+app.delete("/api/favorites/:id", required, async (req, res) => {
+  const product_id = z.coerce.number().int().positive().parse(req.params.id);
+  await favorites.deleteOne({ user_id: req.user!.id, product_id });
+  res.json({ ok: true });
+});
+app.post("/api/orders", required, orderLimiter, async (req, res) => {
   const input = checkoutInput.parse(req.body);
   const result = await transaction(async (session) => {
     const items: OrderItem[] = [];
@@ -201,7 +332,7 @@ app.post("/api/orders", async (req, res) => {
       {
         ...input,
         id,
-        user_id: req.user?.id || null,
+        user_id: req.user!.id,
         items,
         ...amount,
         status: "pending",
@@ -221,11 +352,14 @@ app.get("/api/orders", required, async (req, res) =>
       .toArray(),
   ),
 );
-app.post("/api/orders/track", authLimiter, async (req, res) => {
+app.post("/api/orders/track", required, authLimiter, async (req, res) => {
   const input = z
     .object({ id: z.string().regex(/^NH[A-F0-9]{10}$/), email })
     .parse(req.body);
-  const order = await orders.findOne(input);
+  const order = await orders.findOne({
+    ...input,
+    ...(req.user!.role === "admin" ? {} : { user_id: req.user!.id }),
+  });
   if (!order)
     return res
       .status(404)
@@ -244,7 +378,7 @@ app.post("/api/orders/track", authLimiter, async (req, res) => {
     })),
   });
 });
-app.post("/api/contact", async (req, res) => {
+app.post("/api/contact", messageLimiter, async (req, res) => {
   const input = z
     .object({
       name: z.string().trim().min(2).max(100),
@@ -259,7 +393,7 @@ app.post("/api/contact", async (req, res) => {
   });
   res.status(201).json({ ok: true });
 });
-app.post("/api/subscribe", async (req, res) => {
+app.post("/api/subscribe", messageLimiter, async (req, res) => {
   const input = z.object({ email }).parse(req.body);
   await subscribers.updateOne(
     input,
@@ -337,12 +471,10 @@ app.use("/api", (_req, res) =>
 );
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (error instanceof ZodError)
-    return res
-      .status(400)
-      .json({
-        error: "Vui lòng kiểm tra thông tin đã nhập.",
-        fields: error.flatten().fieldErrors,
-      });
+    return res.status(400).json({
+      error: "Vui lòng kiểm tra thông tin đã nhập.",
+      fields: error.flatten().fieldErrors,
+    });
   if (error instanceof Conflict)
     return res.status(409).json({ error: error.message });
   if ((error as { code?: number }).code === 11000)
@@ -352,10 +484,19 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if ((error as { status?: number }).status === 400)
     return res.status(400).json({ error: "Dữ liệu yêu cầu không hợp lệ." });
   console.error("MongoDB request failed", safeDatabaseError(error));
+  if ((error as { status?: number }).status === 413)
+    return res.status(413).json({ error: "Dữ liệu gửi lên quá lớn." });
   res
     .status(503)
     .json({ error: "Dịch vụ tạm thời chưa sẵn sàng. Vui lòng thử lại sau." });
 });
+if (process.env.NODE_ENV === "production") {
+  const frontendDir = fileURLToPath(
+    new URL("../../frontend/dist/", import.meta.url),
+  );
+  app.use(express.static(frontendDir));
+  app.get("/{*path}", (_req, res) => res.sendFile(frontendDir + "index.html"));
+}
 try {
   await client.connect();
   await db.command({ ping: 1 });

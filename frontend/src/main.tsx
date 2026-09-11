@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { StoreProvider, useStore } from "./store";
-import { Header, Footer, Empty } from "./components";
+import { Header, Footer } from "./components";
 import Home from "./pages/Home";
 import { Shop, ProductDetail, Favorites } from "./pages/Shop";
 import { Cart, Checkout, Success } from "./pages/Checkout";
@@ -18,6 +18,19 @@ import {
   articles,
 } from "./pages/Content";
 import "./styles.css";
+import { AuthGate } from "./AuthGate";
+import { MotionEffects } from "./MotionEffects";
+import Security from "./pages/Security";
+import {
+  Services,
+  ServiceDetail,
+  CollectionDetail,
+  OrderGuide,
+  FlowerCare,
+  SiteMap,
+  NotFound,
+} from "./pages/Explore";
+import { collections, services } from "./editorial";
 const Admin = lazy(() => import("./pages/Admin"));
 function NavigationEffects() {
   const { pathname } = useLocation();
@@ -27,6 +40,16 @@ function NavigationEffects() {
   }, [pathname]);
   useEffect(() => {
     const titles: Record<string, string> = {
+      "/dich-vu": "Dịch vụ hoa theo yêu cầu",
+      "/huong-dan-dat-hang": "Hướng dẫn đặt hàng",
+      "/cham-soc-hoa": "Cẩm nang chăm sóc hoa",
+      "/so-do-trang": "Sơ đồ trang",
+      ...Object.fromEntries(
+        collections.map((c) => ["/bo-suu-tap/" + c.slug, c.name]),
+      ),
+      ...Object.fromEntries(
+        services.map((s) => ["/dich-vu/" + s.slug, s.name]),
+      ),
       "/": "Gửi hoa, gửi cả tấm lòng",
       "/hoa": "Cửa hàng hoa tươi",
       "/bo-suu-tap": "Bộ sưu tập hoa",
@@ -38,6 +61,7 @@ function NavigationEffects() {
       "/dang-nhap": "Đăng nhập",
       "/dang-ky": "Đăng ký",
       "/tai-khoan": "Tài khoản",
+      "/tai-khoan/bao-mat": "Bảo mật tài khoản",
       "/tra-cuu": "Tra cứu đơn hoa",
       "/quan-tri": "Quản trị",
       "/yeu-thich": "Hoa yêu thích",
@@ -128,6 +152,7 @@ function App() {
     <BrowserRouter>
       <StoreProvider>
         <NavigationEffects />
+        <MotionEffects />
         <a className="skip-link" href="#main">
           Đến nội dung chính
         </a>
@@ -145,35 +170,67 @@ function App() {
               <Route path="/hoa" element={<Shop />} />
               <Route path="/hoa/:slug" element={<ProductDetail />} />
               <Route path="/bo-suu-tap" element={<Collections />} />
+              <Route path="/bo-suu-tap/:slug" element={<CollectionDetail />} />
+              <Route path="/dich-vu" element={<Services />} />
+              <Route path="/dich-vu/:slug" element={<ServiceDetail />} />
+              <Route path="/huong-dan-dat-hang" element={<OrderGuide />} />
+              <Route path="/cham-soc-hoa" element={<FlowerCare />} />
+              <Route path="/so-do-trang" element={<SiteMap />} />
               <Route path="/ve-nha-hoa" element={<About />} />
               <Route path="/chuyen-nha-hoa" element={<Blog />} />
               <Route path="/chuyen-nha-hoa/:slug" element={<Article />} />
               <Route path="/lien-he" element={<Contact />} />
               <Route path="/cau-hoi" element={<FAQ />} />
               <Route path="/chinh-sach/:slug" element={<Policy />} />
-              <Route path="/yeu-thich" element={<Favorites />} />
+              <Route
+                path="/yeu-thich"
+                element={
+                  <AuthGate>
+                    <Favorites />
+                  </AuthGate>
+                }
+              />
               <Route path="/gio-hang" element={<Cart />} />
-              <Route path="/thanh-toan" element={<Checkout />} />
+              <Route
+                path="/thanh-toan"
+                element={
+                  <AuthGate>
+                    <Checkout />
+                  </AuthGate>
+                }
+              />
               <Route path="/dat-hang-thanh-cong" element={<Success />} />
               <Route path="/dang-nhap" element={<Auth key="login" />} />
               <Route
                 path="/dang-ky"
                 element={<Auth key="register" register />}
               />
-              <Route path="/tai-khoan" element={<Account />} />
-              <Route path="/tra-cuu" element={<Tracking />} />
-              <Route path="/quan-tri" element={<Admin />} />
               <Route
-                path="*"
+                path="/tai-khoan"
                 element={
-                  <Empty
-                    title="Lạc vào vườn hoa rồi…"
-                    text="Trang bạn tìm chưa có ở đây. Cùng quay lại Nhà Hoa nhé."
-                    to="/"
-                    action="Về trang chủ"
-                  />
+                  <AuthGate>
+                    <Account />
+                  </AuthGate>
                 }
               />
+              <Route
+                path="/tai-khoan/bao-mat"
+                element={
+                  <AuthGate>
+                    <Security />
+                  </AuthGate>
+                }
+              />
+              <Route
+                path="/tra-cuu"
+                element={
+                  <AuthGate>
+                    <Tracking />
+                  </AuthGate>
+                }
+              />
+              <Route path="/quan-tri" element={<Admin />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </main>

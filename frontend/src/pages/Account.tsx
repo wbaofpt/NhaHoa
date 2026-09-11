@@ -18,7 +18,12 @@ export function Auth({ register = false }: { register?: boolean }) {
   const [params] = useSearchParams();
   const next = params.get("next");
   const destination =
-    next?.startsWith("/") && !next.startsWith("//") ? next : "/tai-khoan";
+    next?.startsWith("/") &&
+    !next.startsWith("//") &&
+    !/[\\\r\n]/.test(next) &&
+    !/^\/dang-(nhap|ky)/.test(next)
+      ? next
+      : "/tai-khoan";
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [show, setShow] = useState(false);
@@ -69,6 +74,19 @@ export function Auth({ register = false }: { register?: boolean }) {
             : "Đăng nhập để tiếp tục gửi những điều yêu thương."}
         </p>
         <form onSubmit={submit}>
+          {next && !register && (
+            <p className="soft-note">
+              Đăng nhập để tiếp tục{" "}
+              {next.startsWith("/thanh-toan")
+                ? "đặt hoa"
+                : next.startsWith("/yeu-thich")
+                  ? "lưu những bó hoa yêu thích"
+                  : next.startsWith("/tra-cuu")
+                    ? "theo dõi đơn hoa"
+                    : "mở góc riêng của bạn"}
+              . Giỏ hoa của bạn vẫn được giữ lại.
+            </p>
+          )}
           {register && (
             <label className="field">
               Tên của bạn
@@ -97,9 +115,13 @@ export function Auth({ register = false }: { register?: boolean }) {
             <span className="password-input">
               <input
                 type={show ? "text" : "password"}
+                aria-label="Mật khẩu"
+                aria-describedby={
+                  register ? "registration-password-help" : undefined
+                }
                 required
-                minLength={8}
-                maxLength={128}
+                minLength={register ? 15 : 8}
+                maxLength={72}
                 autoComplete={register ? "new-password" : "current-password"}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -113,7 +135,12 @@ export function Auth({ register = false }: { register?: boolean }) {
                 {show ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </span>
-            {register && <small>Ít nhất 8 ký tự.</small>}
+            {register && (
+              <small id="registration-password-help">
+                Ít nhất 15 ký tự, tối đa 72 byte UTF-8. Có thể dùng cụm từ dễ
+                nhớ.
+              </small>
+            )}
           </label>
           {error && (
             <p className="form-error" role="alert">
@@ -190,6 +217,7 @@ export function Account() {
         <div className="account-bar">
           <span>{user.email}</span>
           <div>
+            <ButtonLink to="/tai-khoan/bao-mat">Bảo mật tài khoản</ButtonLink>
             {user.role === "admin" && (
               <ButtonLink to="/quan-tri">Quản trị cửa hàng</ButtonLink>
             )}

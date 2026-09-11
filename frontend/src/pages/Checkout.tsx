@@ -167,12 +167,10 @@ export function Checkout() {
       <PageHeading eyebrow="ĐẶT HOA" title="Yêu thương sắp được gửi đi." />
       <form onSubmit={submit} className="cart-layout wrap section-bottom">
         <div className="checkout-form">
-          {!user && (
-            <p className="soft-note">
-              <Link to="/dang-nhap?next=/thanh-toan">Đăng nhập</Link> để theo
-              dõi đơn dễ hơn, hoặc tiếp tục đặt hoa không cần tài khoản.
-            </p>
-          )}
+          <p className="soft-note">
+            Đơn hoa được lưu trong tài khoản <strong>{user?.email}</strong> để
+            bạn dễ theo dõi.
+          </p>
           <h2>
             <span className="step-number">1</span>Hoa sẽ được gửi đến
           </h2>

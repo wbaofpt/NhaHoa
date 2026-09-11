@@ -74,10 +74,32 @@ tests/
 | `/ve-nha-hoa`, `/chuyen-nha-hoa`, `/chuyen-nha-hoa/:slug` | Giới thiệu và bài viết |
 | `/lien-he`, `/cau-hoi`, `/chinh-sach/:slug` | Lời nhắn, giải đáp, chính sách |
 | `/quan-tri` | Sản phẩm, tồn kho, đơn và lời nhắn khách hàng |
+| `/tai-khoan/bao-mat` | Đổi mật khẩu, đăng xuất mọi thiết bị |
+| `/bo-suu-tap/:slug` | 5 trang dịp tặng, cách chọn và sản phẩm từ MongoDB |
+| `/dich-vu`, `/dich-vu/:slug` | Hoa theo yêu cầu, hoa cưới, hoa doanh nghiệp; liên kết tư vấn có sẵn chủ đề |
+| `/huong-dan-dat-hang` | 6 bước đặt COD, phí giao, lưu mã đơn và hỗ trợ thay đổi |
+| `/cham-soc-hoa` | Chăm bó hoa, giỏ, bình và hoa cầm tay |
+| `/so-do-trang` | Điều hướng đến các trang cửa hàng, nội dung, tài khoản và hỗ trợ |
+
+Góc chuyện hoa có 6 bài với tìm kiếm không dấu và lọc chủ đề. FAQ có 13 câu trả lời, hỗ trợ tìm kiếm. Trang 404 có đường về cửa hàng và sơ đồ trang. Nội dung bộ sưu tập, dịch vụ và bài mới nằm trong `frontend/src/editorial.ts`; các trang tư vấn nằm trong `frontend/src/pages/Explore.tsx`. Dịch vụ thiết kế riêng tiếp nhận qua biểu mẫu liên hệ và cần xác nhận riêng, không tự tạo đơn mua hàng.
+
+Khách có thể xem/tìm hoa, thêm vào giỏ, đọc bài và gửi liên hệ. Đặt hàng, yêu thích, tài khoản, tra cứu đơn và bảo mật tài khoản yêu cầu đăng nhập. Đăng nhập xong quay về trang đang cần dùng, giữ nguyên giỏ. API kiểm tra chủ sở hữu đơn; biết mã và email không cho phép xem đơn của tài khoản khác. Quản trị viên vẫn có quyền xử lý đơn.
+
+## Hiệu ứng và bảo mật bổ sung
+
+- Các khối nội dung hiện dần khi vào màn hình bằng IntersectionObserver; cánh hoa banner chạy một lượt, phản hồi yêu thích/nút/menu bằng transform/opacity. Reduced motion giữ nội dung hiển thị, tắt hiệu ứng không thiết yếu.
+- Collection `favorites` dùng unique index `user_id + product_id`; yêu thích đồng bộ theo tài khoản, không chia sẻ giữa người dùng cùng trình duyệt.
+- Tất cả API ghi yêu cầu JSON và header `X-NhaHoa-Request: web`, từ chối origin lạ và Fetch Metadata `cross-site`. Không bật CORS cho bên thứ ba. Đây là biện pháp CSRF cho API cùng origin, không phải thông tin đăng nhập.
+- Mật khẩu mới ít nhất 15 ký tự, tối đa 72 byte UTF-8 theo giới hạn bcrypt. Đổi mật khẩu cần mật khẩu hiện tại và thu hồi mọi phiên. `session_version` bảo đảm phiên cũ không sống lại khi có yêu cầu đăng nhập đồng thời. `/auth/logout-all` cũng thu hồi tất cả thiết bị.
+- Giới hạn theo IP cho API, đăng nhập, đặt đơn, liên hệ; đăng nhập còn có giới hạn lần thất bại theo email. Rate limit hiện lưu trong bộ nhớ một tiến trình; khi chạy nhiều replica cần shared store.
+- API nhạy cảm gửi `Cache-Control: no-store`; cookie HttpOnly/SameSite và Secure trong production; không ghi URI/mật khẩu vào log lỗi database.
+- Helmet đặt security headers. Vite dev có CSP và chặn iframe; production backend có thể phục vụ `frontend/dist` trực tiếp dưới CSP. Nếu dùng CDN/reverse proxy phục vụ HTML, cần cấu hình CSP/security headers ở lớp đó. Chỉ dev cho phép inline script để Vite chạy HMR.
+
+Tham khảo: [OWASP CSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html). Chưa triển khai MFA, xác minh email hay gửi email khôi phục mật khẩu.
 
 ## Dữ liệu và transaction
 
-MongoDB lưu các collection `products`, `users`, `orders`, `sessions`, `inquiries`, `subscribers`, `counters`. Chi tiết mua hàng được nhúng trong `orders.items` và giữ giá/tên/ảnh tại thời điểm đặt.
+MongoDB lưu các collection `products`, `users`, `orders`, `sessions`, `favorites`, `inquiries`, `subscribers`, `counters`. Chi tiết mua hàng được nhúng trong `orders.items` và giữ giá/tên/ảnh tại thời điểm đặt.
 
 ID số của sản phẩm/tài khoản được giữ để tương thích với React và giỏ hoa đã lưu. Mã đơn giữ dạng `NH…`. Ngày giao vẫn là chuỗi `YYYY-MM-DD`; các timestamp khác dùng BSON Date và trả về ISO qua API.
 

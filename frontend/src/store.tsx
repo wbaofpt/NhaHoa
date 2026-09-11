@@ -3,9 +3,11 @@ import {
   useContext,
   useEffect,
   useState,
+  useRef,
   type ReactNode,
 } from "react";
 import { api, type CartItem, type Product, type User } from "./types";
+import { useLocation, useNavigate } from "react-router-dom";
 function read<T>(key: string, fallback: T): T {
   try {
     return JSON.parse(localStorage.getItem(key) || "null") ?? fallback;
@@ -35,9 +37,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cart, setCart] = useState<CartItem[]>(() => read("nh-cart", []));
-  const [favorites, setFavorites] = useState<number[]>(() =>
-    read("nh-favorites", []),
-  );
+  const [favorites, setFavorites] = useState<number[]>([]);
+  const pendingFavorites = useRef(new Set<number>());
+  const favoriteRevision = useRef(0);
+  const currentUserId = useRef<number | undefined>(undefined);
+  const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [notice, setNotice] = useState("");
@@ -60,8 +65,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("nh-cart", JSON.stringify(cart));
   }, [cart]);
   useEffect(() => {
-    localStorage.setItem("nh-favorites", JSON.stringify(favorites));
-  }, [favorites]);
+    currentUserId.current = user?.id;
+    setFavorites([]);
+    let cancelled = false;
+    const revision = ++favoriteRevision.current;
+    if (user)
+      api<number[]>("/favorites")
+        .then((ids) => {
+          if (!cancelled && revision === favoriteRevision.current)
+            setFavorites(ids);
+        })
+        .catch((e) => {
+          if (!cancelled) setNotice(e.message);
+        });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+  useEffect(() => {
+    const expire = () => {
+      setUser(null);
+      setNotice("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+    };
+    window.addEventListener("nh-session-expired", expire);
+    return () => window.removeEventListener("nh-session-expired", expire);
+  }, []);
   useEffect(() => {
     if (notice) {
       const timer = setTimeout(() => setNotice(""), 3500);
@@ -95,10 +123,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               : i,
           ),
     );
-  const favorite = (id: number) =>
-    setFavorites((old) =>
-      old.includes(id) ? old.filter((i) => i !== id) : [...old, id],
-    );
+  const favorite = async (id: number) => {
+    if (!user) {
+      setNotice("Đăng nhập để lưu những bó hoa bạn thương.");
+      navigate(
+        "/dang-nhap?next=" +
+          encodeURIComponent(location.pathname + location.search),
+      );
+      return;
+    }
+    if (pendingFavorites.current.has(id)) return;
+    pendingFavorites.current.add(id);
+    const owner = user.id;
+    const removing = favorites.includes(id);
+    try {
+      await api("/favorites/" + id, {
+        method: removing ? "DELETE" : "PUT",
+        body: "{}",
+      });
+      if (currentUserId.current === owner) {
+        favoriteRevision.current++;
+        setFavorites((old) =>
+          removing ? old.filter((i) => i !== id) : [...new Set([...old, id])],
+        );
+        setNotice(
+          removing
+            ? "Đã bỏ khỏi hoa yêu thích."
+            : "Đã lưu vào góc hoa của bạn.",
+        );
+      }
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      pendingFavorites.current.delete(id);
+    }
+  };
   return (
     <Context.Provider
       value={{

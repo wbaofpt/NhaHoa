@@ -5,6 +5,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const env = {
   ...process.env,
   MONGODB_DB_NAME: "nha_hoa_test",
+  NODE_ENV:'test',
   PORT: "4001",
   WEB_PORT: "5174",
   API_TARGET: "http://127.0.0.1:4001",
@@ -32,8 +33,15 @@ function completed(process) {
 async function free(port) {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
-    server.once("error", error => port && error.code==='EADDRINUSE' ? free(0).then(resolve,reject) : reject(error));
-    server.listen(port, "127.0.0.1", () => {const selected=server.address().port;server.close(()=>resolve(selected));});
+    server.once("error", (error) =>
+      port && error.code === "EADDRINUSE"
+        ? free(0).then(resolve, reject)
+        : reject(error),
+    );
+    server.listen(port, "127.0.0.1", () => {
+      const selected = server.address().port;
+      server.close(() => resolve(selected));
+    });
   });
 }
 async function ready(url, process) {
@@ -50,10 +58,10 @@ async function ready(url, process) {
 }
 let api, web;
 try {
-  env.PORT=String(await free(4001));
-  env.WEB_PORT=String(await free(5174));
-  env.API_TARGET='http://127.0.0.1:'+env.PORT;
-  env.FRONTEND_ORIGIN=env.E2E_BASE_URL='http://127.0.0.1:'+env.WEB_PORT;
+  env.PORT = String(await free(4001));
+  env.WEB_PORT = String(await free(5174));
+  env.API_TARGET = "http://127.0.0.1:" + env.PORT;
+  env.FRONTEND_ORIGIN = env.E2E_BASE_URL = "http://127.0.0.1:" + env.WEB_PORT;
   await completed(child(["--import", "tsx", "src/setup.ts"], root + "backend"));
   api = child(["--import", "tsx", "src/server.ts"], root + "backend");
   web = child(
@@ -66,7 +74,7 @@ try {
     root + "frontend",
   );
   await Promise.all([
-    ready(env.API_TARGET+"/api/health", api),
+    ready(env.API_TARGET + "/api/health", api),
     ready(env.E2E_BASE_URL, web),
   ]);
   await completed(

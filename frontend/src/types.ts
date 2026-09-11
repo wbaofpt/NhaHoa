@@ -73,9 +73,18 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch("/api" + path, {
     ...options,
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      "X-NhaHoa-Request": "web",
+      ...options?.headers,
+    },
   });
   const data = await response.json();
+  if (
+    response.status === 401 &&
+    !["/auth/login", "/auth/register", "/auth/me"].includes(path)
+  )
+    window.dispatchEvent(new Event("nh-session-expired"));
   if (!response.ok)
     throw new Error(data.error || "Có lỗi xảy ra, vui lòng thử lại.");
   return data as T;

@@ -1,17 +1,29 @@
-# Kiểm tra Nhà Hoa
+﻿# Kiểm tra Nhà Hoa
 
-Ngày kiểm tra: 11/09/2026, môi trường Windows, MySQL 8 tại `127.0.0.1:3307`.
+Ngày kiểm tra: 11/09/2026, Windows, MongoDB Atlas. E2E sử dụng database riêng `nha_hoa_test`.
 
-- `npm run build`: thành công cho backend TypeScript và frontend Vite/React.
-- `npm test`: 5/5 đạt — phí giao, đầu vào số lượng, ngày giao, giá do server xác định và trạng thái đơn kết thúc.
-- Playwright: 6 kịch bản đạt (5 trong lượt toàn bộ và 1 kiểm tra quản trị bổ sung).
-  - Accessibility: không có vi phạm serious/critical theo axe WCAG A/AA trên trang chủ, cửa hàng, đăng nhập và liên hệ; kiểm tra ở trạng thái reduced motion.
-  - API: đăng ký/đăng nhập, phân quyền, giá, tồn kho, hủy đơn, hoàn kho đúng một lần, thêm/ẩn sản phẩm và hai yêu cầu cạnh tranh một sản phẩm còn một đơn vị.
-  - Giao diện: tìm kiếm không dấu, yêu thích, giỏ hàng lưu sau reload và xóa sản phẩm.
-  - Responsive: menu mobile và 13 trang công khai không tràn ngang ở 390px.
-  - Đặt hàng: tạo đơn COD thật và tra cứu bằng mã/email.
-  - Quản trị: đăng nhập bằng giao diện, mở sản phẩm, lưu chỉnh sửa thành công.
-- Ảnh desktop/mobile đã xem trực tiếp; ảnh trong `.local/preview-desktop.png`, `.local/preview-mobile.png`, `.local/admin.png`.
-- Dữ liệu kiểm thử đã được dọn và tồn kho được hoàn lại.
+- `npm run build`: thành công cho backend TypeScript và frontend React/Vite.
+- `npm test`: 6/6 đạt, gồm phí giao, giới hạn mật khẩu/bcrypt, số lượng, ngày giao, giá do server xác định và trạng thái đơn.
+- `npm run test:e2e`: 11/11 đạt trong lượt chạy toàn bộ.
+  - Accessibility: axe không phát hiện lỗi serious/critical trên trang chủ, cửa hàng, đăng nhập và liên hệ trong chế độ reduced motion.
+  - API: đăng nhập, phân quyền quản trị, tính giá, tồn kho, hủy đơn/hoàn kho và hai yêu cầu cạnh tranh sản phẩm còn một đơn vị.
+  - Bảo mật: từ chối nguồn ghi khác origin, thiếu header bảo vệ, sai content type và khách chưa đăng nhập; kiểm tra no-store và mật khẩu yếu.
+  - Tài khoản: tách yêu thích/đơn hàng giữa người dùng, kiểm tra mật khẩu hiện tại, thu hồi phiên sau đổi mật khẩu hoặc đăng xuất mọi thiết bị.
+  - Giao diện: trang bảo mật đổi mật khẩu thành công; các trang riêng chuyển tới đăng nhập; đăng ký từ thanh toán quay lại đúng trang và giữ giỏ.
+  - Cửa hàng: tìm kiếm, yêu thích đồng bộ tài khoản, giỏ hàng sau reload, đặt COD, tra cứu đơn thuộc tài khoản và chỉnh sửa sản phẩm quản trị.
+  - Responsive: menu và 13 đường dẫn không tràn ngang tại chiều rộng 390px.
+  - Hiệu ứng: nội dung hiện khi cuộn; reduced motion giữ nội dung hiển thị và ẩn cánh hoa trang trí.
+- Đã xem ảnh trang chủ và trang bảo mật: `.local/home-enhanced.png`, `.local/account-security.png`.
+- Runner dọn dữ liệu có nhãn kiểm thử và hoàn lại tồn kho trên database test.
 
-Giới hạn: chưa kiểm tra trên thiết bị iOS/Android vật lý; chưa triển khai tên miền công khai; chưa kết nối thanh toán online, SMTP hoặc đơn vị vận chuyển. Dữ liệu catalog và ảnh là minh họa để phát triển.
+Giới hạn: chưa kiểm tra thiết bị iOS/Android vật lý hoặc kiểm thử xâm nhập độc lập; chưa triển khai tên miền công khai. Chưa tích hợp thanh toán online, SMTP, xác minh email, MFA hoặc khôi phục mật khẩu qua email. Rate limit lưu trong bộ nhớ một tiến trình. Catalog và ảnh là dữ liệu minh họa.
+
+## Bổ sung trang và nội dung — 11/09/2026
+
+- Thêm 15 đường dẫn nội dung: 5 bộ sưu tập chi tiết, trang dịch vụ và 3 dịch vụ chi tiết, hướng dẫn đặt hàng, chăm sóc hoa, sơ đồ trang và 3 bài viết. Làm lại trang 404; bổ sung nội dung FAQ, chính sách và điều hướng.
+- Build TypeScript/React thành công.
+- 11 kiểm thử hiện có đạt trong lượt kiểm tra hồi quy. Hai kiểm thử nội dung mới đạt sau khi sửa kiểu chữ đánh số hướng dẫn và nhãn bộ lọc chủ đề.
+- Kiểm tra 15 trang mới tại chiều rộng 390px: có một H1, tiêu đề trang phù hợp, ảnh tải được, không tràn ngang; không ghi nhận lỗi JavaScript.
+- Axe không phát hiện lỗi serious/critical trên dịch vụ, hướng dẫn, chăm sóc hoa và sơ đồ trang với reduced motion.
+- Kiểm tra đường đi bộ sưu tập → sản phẩm, dịch vụ → biểu mẫu có chủ đề, tìm/lọc bài viết, tìm FAQ và điều hướng từ 404.
+- Đã xem trực tiếp `.local/services-desktop.png` và `.local/guide-mobile.png`.

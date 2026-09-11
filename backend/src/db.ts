@@ -15,6 +15,7 @@ export type User = {
   email: string;
   role: "customer" | "admin";
   password_hash: string;
+  session_version?: number;
   created_at: Date;
 };
 export type Product = z.infer<typeof productInput> & {
@@ -50,6 +51,7 @@ export const products = db.collection<Product>("products");
 export const orders = db.collection<Order>("orders");
 export const sessions = db.collection<{
   token_hash: string;
+  session_version?: number;
   user_id: number;
   expires_at: Date;
 }>("sessions");
@@ -67,6 +69,11 @@ export const counters = db.collection<{ _id: string; value: number }>(
   "counters",
 );
 export const publicFields = { projection: { _id: 0 } };
+export const favorites = db.collection<{
+  user_id: number;
+  product_id: number;
+  created_at: Date;
+}>("favorites");
 export async function nextId(name: string) {
   const counter = await counters.findOneAndUpdate(
     { _id: name },

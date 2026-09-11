@@ -65,6 +65,7 @@ export function Header() {
             </NavLink>
             <NavLink to="/hoa">Cửa hàng hoa</NavLink>
             <NavLink to="/bo-suu-tap">Bộ sưu tập</NavLink>
+            <NavLink to="/dich-vu">Dịch vụ</NavLink>
             <NavLink to="/ve-nha-hoa">Về Nhà Hoa</NavLink>
             <NavLink to="/chuyen-nha-hoa">Chuyện nhà hoa</NavLink>
             <NavLink className="mobile-nav-extra" to="/tai-khoan">
@@ -205,6 +206,8 @@ export function Footer() {
           <h3>Khám phá Nhà Hoa</h3>
           <Link to="/hoa">Tất cả hoa tươi</Link>
           <Link to="/bo-suu-tap">Hoa cho mọi dịp</Link>
+          <Link to="/dich-vu">Dịch vụ hoa</Link>
+          <Link to="/cham-soc-hoa">Cẩm nang chăm hoa</Link>
           <Link to="/ve-nha-hoa">Câu chuyện của chúng mình</Link>
           <Link to="/chuyen-nha-hoa">Chuyện hoa & cuộc sống</Link>
         </div>
@@ -213,6 +216,7 @@ export function Footer() {
           <Link to="/lien-he">Liên hệ & tư vấn</Link>
           <Link to="/tra-cuu">Theo dõi đơn hàng</Link>
           <Link to="/cau-hoi">Câu hỏi thường gặp</Link>
+          <Link to="/huong-dan-dat-hang">Hướng dẫn đặt hàng</Link>
           <Link to="/chinh-sach/giao-hang">Giao hàng & đổi trả</Link>
         </div>
         <div>
@@ -233,6 +237,7 @@ export function Footer() {
           © {new Date().getFullYear()} Nhà Hoa. Được làm bằng cả tấm lòng.
         </span>
         <Link to="/chinh-sach/bao-mat">Chính sách bảo mật</Link>
+        <Link to="/so-do-trang">Sơ đồ trang</Link>
         <Link to="/chinh-sach/dieu-khoan">Điều khoản sử dụng</Link>
       </div>
     </footer>
@@ -316,7 +321,12 @@ export function CatalogState({ children }: { children: ReactNode }) {
   const { loading, error, reload } = useStore();
   if (loading)
     return (
-      <div className="product-grid" aria-busy="true" aria-label="Đang tải hoa">
+      <div
+        className="product-grid"
+        role="status"
+        aria-busy="true"
+        aria-label="Đang tải hoa"
+      >
         {[1, 2, 3, 4].map((i) => (
           <div className="skeleton" key={i} />
         ))}

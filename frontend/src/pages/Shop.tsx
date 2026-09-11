@@ -108,6 +108,18 @@ export function Shop() {
               <option value="high">Trên 800.000đ</option>
             </select>
           </label>
+          {(query || occasion || category !== "Tất cả" || budget !== "all") && (
+            <button
+              className="button outline small"
+              onClick={() => {
+                setParams({});
+                setBudget("all");
+                setSort("featured");
+              }}
+            >
+              Xóa bộ lọc
+            </button>
+          )}
           <div className="sidebar-note">
             <Flower2 size={28} strokeWidth={1} />
             <h3>Chưa tìm thấy điều bạn muốn?</h3>
@@ -250,6 +262,9 @@ export function ProductDetail() {
                   Cắt chéo gốc, thay nước sạch mỗi ngày và đặt hoa ở nơi mát.
                   Tránh nắng trực tiếp và nguồn nhiệt để hoa ở bên bạn lâu hơn.
                 </p>
+                <Link className="text-link" to="/cham-soc-hoa">
+                  Xem hướng dẫn chăm từng kiểu hoa
+                </Link>
               </details>
               <details>
                 <summary>Giao nhận hoa</summary>
@@ -258,6 +273,9 @@ export function ProductDetail() {
                   hợp trước khi giao. Phí giao nội thành là 35.000đ, miễn phí từ
                   800.000đ.
                 </p>
+                <Link className="text-link" to="/huong-dan-dat-hang">
+                  Hướng dẫn đặt hàng
+                </Link>
               </details>
             </div>
           </section>

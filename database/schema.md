@@ -12,6 +12,9 @@ Backend dùng MongoDB Node.js driver chính thức; cần Atlas hoặc replica s
 | `inquiries` | Lời nhắn, tên, email, thời gian gửi |
 | `subscribers` | Email đăng ký duy nhất và thời gian |
 | `counters` | Bộ đếm nguyên tử cho `products/users/inquiries`, giữ tương thích ID phía React |
+| `favorites` | `user_id`, `product_id`, ngày lưu; cặp user/product duy nhất |
+
+`users.session_version` và `sessions.session_version` kiểm tra phiên thuộc thế hệ hiện tại. Đổi mật khẩu/đăng xuất mọi thiết bị tăng version trong transaction và xóa các phiên hiện có. Phiên tạo từ dữ liệu đăng nhập cũ cũng bị từ chối.
 
 Mỗi phần tử `orders.items` lưu `product_id`, `name`, `image`, `price`, `quantity` tại lúc mua. Lịch sử không đổi khi chỉnh sửa sản phẩm.
 
