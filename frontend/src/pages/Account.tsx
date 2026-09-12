@@ -217,6 +217,7 @@ export function Account() {
         <div className="account-bar">
           <span>{user.email}</span>
           <div>
+            <ButtonLink to="/tai-khoan/thong-tin">Thông tin cá nhân</ButtonLink>
             <ButtonLink to="/tai-khoan/bao-mat">Bảo mật tài khoản</ButtonLink>
             {user.role === "admin" && (
               <ButtonLink to="/quan-tri">Quản trị cửa hàng</ButtonLink>
@@ -250,7 +251,7 @@ export function Account() {
                   {statuses[o.status]}
                 </span>
                 <strong>{money(o.total)}</strong>
-                <Link className="text-link" to={"/tra-cuu?ma=" + o.id}>
+                <Link className="text-link" to={"/tai-khoan/don-hang/" + o.id}>
                   Chi tiết <ArrowUpRight size={16} />
                 </Link>
               </article>

@@ -1,17 +1,11 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useStore } from "./store";
-import { Flower2 } from "lucide-react";
+import { BloomLoader } from "./PageMotion";
 export function AuthGate({ children }: { children: ReactNode }) {
   const { user, authLoading } = useStore();
   const location = useLocation();
-  if (authLoading)
-    return (
-      <div className="auth-loading wrap" role="status">
-        <Flower2 className="loading-flower" aria-hidden="true" />
-        Đang mở góc riêng của bạn…
-      </div>
-    );
+  if (authLoading) return <BloomLoader label="Đang mở góc riêng của bạn…" />;
   if (!user)
     return (
       <Navigate

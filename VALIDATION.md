@@ -1,6 +1,16 @@
 ﻿# Kiểm tra Nhà Hoa
 
-Ngày kiểm tra: 11/09/2026, Windows, MongoDB Atlas. E2E sử dụng database riêng `nha_hoa_test`.
+## Kết quả mới nhất — 12/09/2026
+
+- Bổ sung chuyển cảnh và BloomLoader: build thành công, toàn bộ 17 E2E test đạt. Kiểm tra điều hướng nhanh/Back, giữ focus khi tìm kiếm, loader với API bị giữ chờ, kết thúc loading và reduced motion. Đã xem ảnh `.local/bloom-loading.png`.
+
+- `npm run build` thành công; `npm test` đạt 6/6; `npm run test:e2e` đạt 15/15 trong một lượt chạy toàn bộ.
+- Hồ sơ cá nhân: yêu cầu đăng nhập, lưu điện thoại/địa chỉ vào MongoDB, giữ dữ liệu sau tải lại, điền sẵn thanh toán. API từ chối thay email/ID/quyền và số điện thoại sai định dạng.
+- Chi tiết đơn: khách chưa đăng nhập nhận 401, tài khoản khác nhận 404; chủ đơn xem được sản phẩm, liên hệ, địa chỉ, lời thiệp và tổng tiền. Thay hồ sơ không thay địa chỉ trong đơn cũ. Liên hệ từ đơn điền sẵn mã để hỗ trợ.
+- Hai trang tài khoản mới được kiểm tra ở 390px và bằng axe WCAG A/AA, không có lỗi serious/critical. Đã xem `.local/profile-mobile.png` và `.local/order-detail-mobile.png`.
+- API local trả trạng thái `ok`, database `mongodb`; website local truy cập được tại cổng 5173.
+
+Ngày kiểm tra trước: 11/09/2026, Windows, MongoDB Atlas. E2E sử dụng database riêng `nha_hoa_test`.
 
 - `npm run build`: thành công cho backend TypeScript và frontend React/Vite.
 - `npm test`: 6/6 đạt, gồm phí giao, giới hạn mật khẩu/bcrypt, số lượng, ngày giao, giá do server xác định và trạng thái đơn.

@@ -21,6 +21,8 @@ import "./styles.css";
 import { AuthGate } from "./AuthGate";
 import { MotionEffects } from "./MotionEffects";
 import Security from "./pages/Security";
+import { PageMotion, BloomLoader } from "./PageMotion";
+import { Profile, OrderDetail } from "./pages/Member";
 import {
   Services,
   ServiceDetail,
@@ -62,6 +64,7 @@ function NavigationEffects() {
       "/dang-ky": "Đăng ký",
       "/tai-khoan": "Tài khoản",
       "/tai-khoan/bao-mat": "Bảo mật tài khoản",
+      "/tai-khoan/thong-tin": "Thông tin cá nhân",
       "/tra-cuu": "Tra cứu đơn hoa",
       "/quan-tri": "Quản trị",
       "/yeu-thich": "Hoa yêu thích",
@@ -77,7 +80,11 @@ function NavigationEffects() {
       titles[pathname] ||
       article?.title ||
       product?.name ||
-      (pathname.startsWith("/hoa/") ? "Chi tiết hoa" : "Trang không tồn tại");
+      (pathname.startsWith("/tai-khoan/don-hang/")
+        ? "Chi tiết đơn hoa"
+        : pathname.startsWith("/hoa/")
+          ? "Chi tiết hoa"
+          : "Trang không tồn tại");
     document.title = title + " | Nhà Hoa";
     document
       .querySelector('meta[property="og:title"]')
@@ -157,13 +164,9 @@ function App() {
           Đến nội dung chính
         </a>
         <Header />
-        <main id="main">
+        <PageMotion>
           <Suspense
-            fallback={
-              <p className="wrap section" role="status">
-                Đang mở trang…
-              </p>
-            }
+            fallback={<BloomLoader label="Nhà đang mở trang cho bạn…" />}
           >
             <Routes>
               <Route path="/" element={<Home />} />
@@ -230,10 +233,26 @@ function App() {
                 }
               />
               <Route path="/quan-tri" element={<Admin />} />
+              <Route
+                path="/tai-khoan/thong-tin"
+                element={
+                  <AuthGate>
+                    <Profile />
+                  </AuthGate>
+                }
+              />
+              <Route
+                path="/tai-khoan/don-hang/:id"
+                element={
+                  <AuthGate>
+                    <OrderDetail />
+                  </AuthGate>
+                }
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
-        </main>
+        </PageMotion>
         <Footer />
       </StoreProvider>
     </BrowserRouter>

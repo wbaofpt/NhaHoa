@@ -6,7 +6,7 @@ Backend dùng MongoDB Node.js driver chính thức; cần Atlas hoặc replica s
 | Collection | Nội dung / ràng buộc |
 |---|---|
 | `products` | `id` số và `slug` duy nhất; tên, loại, dịp tặng, giá VND nguyên, ảnh, mô tả, thành phần, tồn kho, `active` boolean |
-| `users` | `id`, email duy nhất; tên, mật khẩu bcrypt, role `customer/admin`, `created_at` kiểu Date |
+| `users` | `id`, email duy nhất; tên, mật khẩu bcrypt, role `customer/admin`, `created_at` kiểu Date; `phone` và `address` tùy chọn để điền sẵn thanh toán |
 | `orders` | Mã `NH…` duy nhất; người nhận, liên hệ, địa chỉ, ngày giao `YYYY-MM-DD`, thiệp, tổng tiền, trạng thái, `items` nhúng |
 | `sessions` | Hash token, `user_id`, `expires_at` kiểu Date; TTL tự dọn phiên hết hạn |
 | `inquiries` | Lời nhắn, tên, email, thời gian gửi |
@@ -17,6 +17,8 @@ Backend dùng MongoDB Node.js driver chính thức; cần Atlas hoặc replica s
 `users.session_version` và `sessions.session_version` kiểm tra phiên thuộc thế hệ hiện tại. Đổi mật khẩu/đăng xuất mọi thiết bị tăng version trong transaction và xóa các phiên hiện có. Phiên tạo từ dữ liệu đăng nhập cũ cũng bị từ chối.
 
 Mỗi phần tử `orders.items` lưu `product_id`, `name`, `image`, `price`, `quantity` tại lúc mua. Lịch sử không đổi khi chỉnh sửa sản phẩm.
+
+Hồ sơ chỉ cập nhật `name`, `phone`, `address` của người đang đăng nhập. Tài khoản cũ không có hai trường mới được đọc như chuỗi rỗng, không cần migration. Đổi hồ sơ không cập nhật địa chỉ hay liên hệ trong đơn đã đặt. Endpoint chi tiết đơn luôn lọc cả mã đơn và `user_id` của phiên hiện tại.
 
 Đặt hàng chạy trong `withTransaction`: giảm kho bằng điều kiện `stock >= quantity`, đọc giá từ sản phẩm, rồi ghi đơn. Bất kỳ lỗi nào đều rollback. Hủy đơn cập nhật trạng thái và hoàn kho trong cùng transaction; driver tự retry write conflict. Các thao tác trong transaction chạy tuần tự.
 

@@ -109,7 +109,7 @@ const passwordLimiter = rateLimit({
   message: { error: "Vui lòng thử thay đổi bảo mật sau 15 phút." },
 });
 const dummyPasswordHash = bcrypt.hashSync(randomBytes(24).toString("hex"), 12);
-type PublicUser = Pick<User, "id" | "name" | "email" | "role">;
+type PublicUser = Pick<User, "id" | "name" | "email" | "role" | "phone" | "address">;
 declare global {
   namespace Express {
     interface Request {
@@ -124,6 +124,8 @@ const publicUser = (user: User): PublicUser => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  phone: user.phone || "",
+  address: user.address || "",
 });
 app.use("/api", async (req, _res, next) => {
   try {
@@ -219,6 +221,27 @@ app.post("/api/auth/login", authLimiter, accountLimiter, async (req, res) => {
   res.json(publicUser(user));
 });
 app.get("/api/auth/me", (req, res) => res.json(req.user || null));
+app.patch("/api/auth/profile", required, async (req, res) => {
+  const input = z.object({
+    name: registration.shape.name,
+    phone: z.union([checkoutInput.shape.phone, z.literal("")]),
+    address: z.union([checkoutInput.shape.address, z.literal("")]),
+  }).strict().parse(req.body);
+  const user = await users.findOneAndUpdate(
+    { id: req.user!.id }, { $set: input }, { returnDocument: "after" },
+  );
+  if (!user) return res.status(401).json({ error: "Vui lòng đăng nhập lại." });
+  res.json(publicUser(user));
+});
+app.get("/api/orders/:id", required, async (req, res) => {
+  const id = z.string().regex(/^NH[a-f0-9]{10}$/i).parse(req.params.id);
+  const order = await orders.findOne(
+    { id: id.toUpperCase(), user_id: req.user!.id },
+    { projection: { _id: 0, user_id: 0 } },
+  );
+  if (!order) return res.status(404).json({ error: "Không tìm thấy đơn hoa trong tài khoản của bạn." });
+  res.json(order);
+});
 app.post("/api/auth/logout", async (req, res) => {
   if (typeof req.cookies.session === "string")
     await sessions.deleteOne({ token_hash: hash(req.cookies.session) });

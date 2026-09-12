@@ -332,12 +332,17 @@ export function Article() {
 export function Contact() {
   const [params] = useSearchParams();
   const requested = services.find((s) => s.slug === params.get("dich-vu"));
+  const orderCode = /^NH[A-F0-9]{10}$/.test(params.get("don") || "")
+    ? params.get("don")
+    : null;
   const [form, setForm] = useState({
     name: "",
     email: "",
     message: requested
       ? `Mình muốn được tư vấn: ${requested.name}.\nNgày cần hoa: \nNgân sách dự kiến: \nĐịa điểm và mong muốn: `
-      : "",
+      : orderCode
+        ? `Mình cần hỗ trợ đơn ${orderCode}.\nNội dung cần hỗ trợ: `
+        : "",
   });
   const [result, setResult] = useState("");
   const [error, setError] = useState("");

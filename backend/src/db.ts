@@ -14,6 +14,8 @@ export type User = {
   name: string;
   email: string;
   role: "customer" | "admin";
+  phone?: string;
+  address?: string;
   password_hash: string;
   session_version?: number;
   created_at: Date;

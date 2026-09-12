@@ -119,8 +119,8 @@ export function Checkout() {
   const [form, setForm] = useState({
     recipient: user?.name || "",
     email: user?.email || "",
-    phone: "",
-    address: "",
+    phone: user?.phone || "",
+    address: user?.address || "",
     delivery_date: today(),
     message: "",
     payment_method: "cod",

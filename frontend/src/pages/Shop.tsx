@@ -19,7 +19,7 @@ import {
 } from "../components";
 import { categories, occasions, money } from "../types";
 export function Shop() {
-  const { products } = useStore();
+  const { products, loading } = useStore();
   const [params, setParams] = useSearchParams();
   const category = params.get("loai") || "Tất cả";
   const occasion = params.get("dip") || "";
@@ -151,7 +151,7 @@ export function Shop() {
             </label>
           </div>
           <p className="result-count">
-            {filtered.length} mẫu hoa dành cho bạn {occasion && "· " + occasion}
+            {loading ? "Đang tìm những sắc hoa…" : `${filtered.length} mẫu hoa dành cho bạn${occasion ? " · " + occasion : ""}`}
           </p>
           <CatalogState>
             {filtered.length ? (

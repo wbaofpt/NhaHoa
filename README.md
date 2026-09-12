@@ -80,12 +80,19 @@ tests/
 | `/huong-dan-dat-hang` | 6 bước đặt COD, phí giao, lưu mã đơn và hỗ trợ thay đổi |
 | `/cham-soc-hoa` | Chăm bó hoa, giỏ, bình và hoa cầm tay |
 | `/so-do-trang` | Điều hướng đến các trang cửa hàng, nội dung, tài khoản và hỗ trợ |
+| `/tai-khoan/thong-tin` | Lưu tên, điện thoại và địa chỉ thường dùng; tự điền khi thanh toán |
+| `/tai-khoan/don-hang/:id` | Chi tiết đơn thuộc tài khoản: tiến độ, sản phẩm, tiền, địa chỉ và lời thiệp |
 
 Góc chuyện hoa có 6 bài với tìm kiếm không dấu và lọc chủ đề. FAQ có 13 câu trả lời, hỗ trợ tìm kiếm. Trang 404 có đường về cửa hàng và sơ đồ trang. Nội dung bộ sưu tập, dịch vụ và bài mới nằm trong `frontend/src/editorial.ts`; các trang tư vấn nằm trong `frontend/src/pages/Explore.tsx`. Dịch vụ thiết kế riêng tiếp nhận qua biểu mẫu liên hệ và cần xác nhận riêng, không tự tạo đơn mua hàng.
+
+Hồ sơ cá nhân lưu trong collection `users`, cập nhật qua `PATCH /api/auth/profile` có xác thực và chỉ nhận tên, điện thoại, địa chỉ. Không cho thay email, ID hoặc quyền qua API này. `GET /api/orders/:id` kiểm tra chủ sở hữu và không trả `_id`/`user_id`. Sửa hồ sơ không thay đổi thông tin đã chốt trong đơn cũ. Liên hệ từ chi tiết đơn điền sẵn mã đơn vào lời nhắn.
 
 Khách có thể xem/tìm hoa, thêm vào giỏ, đọc bài và gửi liên hệ. Đặt hàng, yêu thích, tài khoản, tra cứu đơn và bảo mật tài khoản yêu cầu đăng nhập. Đăng nhập xong quay về trang đang cần dùng, giữ nguyên giỏ. API kiểm tra chủ sở hữu đơn; biết mã và email không cho phép xem đơn của tài khoản khác. Quản trị viên vẫn có quyền xử lý đơn.
 
 ## Hiệu ứng và bảo mật bổ sung
+
+- `PageMotion.tsx` tạo chuyển cảnh 420ms khi đổi đường dẫn và dải màu trang trí 650ms. Hiệu ứng cũ được hủy khi điều hướng tiếp; thay bộ lọc/query không chạy lại chuyển cảnh hoặc tạo lại biểu mẫu. Không trì hoãn điều hướng để chờ animation.
+- `BloomLoader` dùng logo Nhà Hoa, quỹ đạo cánh hoa và chấm nhịp cho thời gian tải catalog, phiên đăng nhập hoặc trang lazy. Skeleton có ánh sáng lướt; thông báo tải dùng `role=status`. Reduced motion tắt cả CSS animation và chuyển cảnh WAAPI, kể cả khi đổi cài đặt giữa chừng.
 
 - Các khối nội dung hiện dần khi vào màn hình bằng IntersectionObserver; cánh hoa banner chạy một lượt, phản hồi yêu thích/nút/menu bằng transform/opacity. Reduced motion giữ nội dung hiển thị, tắt hiệu ứng không thiết yếu.
 - Collection `favorites` dùng unique index `user_id + product_id`; yêu thích đồng bộ theo tài khoản, không chia sẻ giữa người dùng cùng trình duyệt.

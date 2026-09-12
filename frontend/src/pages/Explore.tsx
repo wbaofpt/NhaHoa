@@ -406,6 +406,7 @@ export function SiteMap() {
       title: "Tài khoản & hỗ trợ",
       links: [
         ["/tai-khoan", "Tài khoản và đơn hàng"],
+        ["/tai-khoan/thong-tin", "Thông tin cá nhân"],
         ["/yeu-thich", "Hoa yêu thích"],
         ["/tai-khoan/bao-mat", "Bảo mật tài khoản"],
         ["/tra-cuu", "Tra cứu đơn"],

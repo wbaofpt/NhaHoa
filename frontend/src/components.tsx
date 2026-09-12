@@ -17,6 +17,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useStore } from "./store";
+import { BloomLoader } from "./PageMotion";
 import { api, post, money, type Product } from "./types";
 export function Logo({ light = false }: { light?: boolean }) {
   return (
@@ -321,15 +322,13 @@ export function CatalogState({ children }: { children: ReactNode }) {
   const { loading, error, reload } = useStore();
   if (loading)
     return (
-      <div
-        className="product-grid"
-        role="status"
-        aria-busy="true"
-        aria-label="Đang tải hoa"
-      >
-        {[1, 2, 3, 4].map((i) => (
-          <div className="skeleton" key={i} />
-        ))}
+      <div>
+        <BloomLoader label="Nhà đang chọn những bó hoa dành cho bạn…" />
+        <div className="product-grid" aria-hidden="true">
+          {[1, 2, 3, 4].map((i) => (
+            <div className="skeleton" key={i} />
+          ))}
+        </div>
       </div>
     );
   if (error)
