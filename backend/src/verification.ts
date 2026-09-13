@@ -3,25 +3,22 @@ import nodemailer from "nodemailer";
 export const code = () => String(randomInt(100000, 1000000));
 export const digest = (value: string) => createHash("sha256").update(value).digest("hex");
 const emailTemplate = (value: string) => `<!doctype html><html><body style="margin:0;background:#fbf9f5;color:#30392f;font-family:Arial,sans-serif"><div style="max-width:560px;margin:32px auto;padding:36px 28px;background:#fff;border:1px solid #e2e2d8"><div style="text-align:center;color:#354d3c;font-family:Georgia,serif;font-size:34px">nhà hoa</div><div style="height:1px;background:#e2e2d8;margin:24px 0"></div><p style="font-size:12px;letter-spacing:2px;color:#9c584e;text-align:center;text-transform:uppercase">Xác nhận tài khoản</p><h1 style="font:28px Georgia,serif;text-align:center;font-weight:400">Một chút yêu thương đang chờ bạn.</h1><p style="font-size:15px;line-height:1.7;text-align:center;color:#626957">Dùng mã dưới đây để hoàn tất đăng ký tài khoản Nhà Hoa.</p><div style="margin:28px auto;padding:18px;text-align:center;background:#f4f0e8;color:#354d3c;font:bold 32px Arial;letter-spacing:8px">${value}</div><p style="font-size:12px;line-height:1.7;text-align:center;color:#626957">Mã có hiệu lực trong 10 phút. Nếu bạn không yêu cầu đăng ký, hãy bỏ qua email này.</p><div style="height:1px;background:#e2e2d8;margin:28px 0"></div><p style="font:italic 14px Georgia,serif;text-align:center;color:#9c584e">From our garden, with love.</p></div></body></html>`;
-export async function sendEmailCode(to: string, value: string) {
+const passwordResetEmailTemplate = (value: string) => `<!doctype html><html><body style="margin:0;background:#fbf9f5;color:#30392f;font-family:Arial,sans-serif"><div style="max-width:560px;margin:32px auto;padding:36px 28px;background:#fff;border:1px solid #e2e2d8"><div style="text-align:center;color:#354d3c;font-family:Georgia,serif;font-size:34px">nhà hoa</div><div style="height:1px;background:#e2e2d8;margin:24px 0"></div><p style="font-size:12px;letter-spacing:2px;color:#9c584e;text-align:center;text-transform:uppercase">Khôi phục mật khẩu</p><h1 style="font:28px Georgia,serif;text-align:center;font-weight:400">Mã đặt lại mật khẩu của bạn</h1><p style="font-size:15px;line-height:1.7;text-align:center;color:#626957">Dùng mã này để tạo mật khẩu mới cho tài khoản Nhà Hoa. Đây không phải mã đăng ký tài khoản.</p><div style="margin:28px auto;padding:18px;text-align:center;background:#f4f0e8;color:#354d3c;font:bold 32px Arial;letter-spacing:8px">${value}</div><p style="font-size:12px;line-height:1.7;text-align:center;color:#626957">Mã có hiệu lực trong 10 phút. Nếu bạn không yêu cầu đổi mật khẩu, hãy bỏ qua email này.</p></div></body></html>`;
+export async function sendEmailCode(to: string, value: string, purpose: "registration" | "password-reset" = "registration") {
   const smtpUser = process.env.SMTP_USER;
   const smtpPassword = process.env.SMTP_PASSWORD;
+  const subject = purpose === "password-reset" ? "Mã đặt lại mật khẩu · Nhà Hoa" : "Mã xác minh đăng ký · Nhà Hoa";
+  const html = purpose === "password-reset" ? passwordResetEmailTemplate(value) : emailTemplate(value);
   if (smtpUser && smtpPassword) {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: Number(process.env.SMTP_PORT || 465),
-      secure: true,
-      auth: { user: smtpUser, pass: smtpPassword },
-    });
-    await transporter.sendMail({ from: process.env.MAIL_FROM || smtpUser, to, subject: "Mã xác nhận · Nhà Hoa", html: emailTemplate(value) });
+    const transporter = nodemailer.createTransport({ host: process.env.SMTP_HOST || "smtp.gmail.com", port: Number(process.env.SMTP_PORT || 465), secure: true, auth: { user: smtpUser, pass: smtpPassword } });
+    await transporter.sendMail({ from: process.env.MAIL_FROM || smtpUser, to, subject, html });
     return;
   }
   const key = process.env.RESEND_API_KEY; const from = process.env.MAIL_FROM;
   if (!key || !from) throw new Error("Thiếu cấu hình Resend (RESEND_API_KEY, MAIL_FROM).");
-  const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ from, to, subject: "Mã xác nhận · Nhà Hoa", html: emailTemplate(value) }) });
+  const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ from, to, subject, html }) });
   if (!response.ok) throw new Error("Không thể gửi email xác nhận.");
-}
-export async function sendPasswordChangedEmail(to: string) {
+}export async function sendPasswordChangedEmail(to: string) {
   const html = `<!doctype html><html><body style="margin:0;background:#fbf9f5;color:#30392f;font-family:Arial,sans-serif"><div style="max-width:560px;margin:32px auto;padding:36px 28px;background:#fff;border:1px solid #e2e2d8"><div style="text-align:center;color:#354d3c;font-family:Georgia,serif;font-size:34px">nhà hoa</div><div style="height:1px;background:#e2e2d8;margin:24px 0"></div><p style="font-size:12px;letter-spacing:2px;color:#9c584e;text-align:center;text-transform:uppercase">Bảo mật tài khoản</p><h1 style="font:28px Georgia,serif;text-align:center;font-weight:400">Mật khẩu đã được thay đổi.</h1><p style="font-size:15px;line-height:1.7;text-align:center;color:#626957">Mật khẩu tài khoản Nhà Hoa của bạn vừa được cập nhật thành công. Nếu bạn không thực hiện thay đổi này, hãy liên hệ Nhà Hoa ngay.</p><div style="height:1px;background:#e2e2d8;margin:28px 0"></div><p style="font:italic 14px Georgia,serif;text-align:center;color:#9c584e">From our garden, with love.</p></div></body></html>`;
   const smtpUser = process.env.SMTP_USER;
   const smtpPassword = process.env.SMTP_PASSWORD;

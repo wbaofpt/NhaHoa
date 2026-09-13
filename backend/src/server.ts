@@ -233,7 +233,7 @@ app.post("/api/auth/forgot-password/request", authLimiter, async (req, res) => {
   if (!previous || Date.now() - previous.sentAt >= 60000) {
     const value = createVerificationCode();
     const exists = await users.findOne({ email: address }, { projection: { _id: 1 } });
-    if (exists) await sendEmailCode(address, value);
+    if (exists) await sendEmailCode(address, value, "password-reset");
     passwordResetCodes.set(address, { hash: digestVerificationCode(value), expires: Date.now() + 600000, sentAt: Date.now() });
   }
   res.json({ ok: true, message: "Nếu email tồn tại, mã xác nhận đã được gửi." });
