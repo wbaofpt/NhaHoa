@@ -26,6 +26,12 @@ export const registrationPhone = z.string().trim()
   .transform((value) => value.replace(/[\s()-]/g, ""))
   .pipe(z.string().regex(/^(?:0|\+84)[35789][0-9]{8}$/, "Số điện thoại di động không hợp lệ."))
   .transform((value) => value.startsWith("0") ? `+84${value.slice(1)}` : value);
+export const loginIdentifier = z.union([z.string().trim().pipe(email), registrationPhone]);
+export const loginCredentials = z.preprocess((value) => {
+  if (!value || typeof value !== "object") return value;
+  const input = value as Record<string, unknown>;
+  return { ...input, identifier: input.identifier ?? input.email };
+}, z.object({ identifier: loginIdentifier, password: credentials.shape.password }));
 export const registration = credentials.extend({
   name: z.string().trim().min(2).max(100),
   password: newPassword,

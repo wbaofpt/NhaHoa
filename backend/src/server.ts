@@ -31,6 +31,8 @@ import {
 import {
   checkoutInput,
   credentials,
+  loginCredentials,
+  loginIdentifier,
   registration,
   productInput,
   email,
@@ -90,13 +92,10 @@ const accountLimiter = rateLimit({
   windowMs: 15 * 60000,
   limit: 10,
   skipSuccessfulRequests: true,
-  keyGenerator: (req) =>
-    "account:" +
-    hash(
-      typeof req.body?.email === "string"
-        ? req.body.email.trim().toLowerCase()
-        : "invalid",
-    ),
+  keyGenerator: (req) => {
+    const identifier = loginIdentifier.safeParse(req.body?.identifier ?? req.body?.email);
+    return "account:" + hash(identifier.success ? identifier.data : "invalid");
+  },
   message: {
     error: "Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau 15 phút.",
   },
@@ -239,14 +238,20 @@ app.post("/api/auth/register", authLimiter, async (req, res) => {
   res.status(201).json(publicUser(user));
 });
 app.post("/api/auth/login", authLimiter, accountLimiter, async (req, res) => {
-  const input = credentials.parse(req.body);
-  const user = await users.findOne({ email: input.email });
+  const input = loginCredentials.parse(req.body);
+  const candidates = await users.find(
+    input.identifier.includes("@")
+      ? { email: input.identifier }
+      : { phone: { $in: [input.identifier, "0" + input.identifier.slice(3)] } },
+  ).limit(2).toArray();
+  // Legacy accounts may share a contact number; those must sign in by email.
+  const user = candidates.length === 1 ? candidates[0] : null;
   const matches = await bcrypt.compare(
     input.password,
     user?.password_hash || dummyPasswordHash,
   );
   if (!user || !matches)
-    return res.status(401).json({ error: "Email hoặc mật khẩu chưa đúng." });
+    return res.status(401).json({ error: "Email, số điện thoại hoặc mật khẩu chưa đúng. Nếu số điện thoại dùng cho nhiều tài khoản, hãy đăng nhập bằng email." });
   if (user.banned)
     return res.status(403).json({ error: "Tài khoản đang bị khóa. Vui lòng liên hệ Nhà Hoa." });
   await createSession(res, user, req.cookies.session);

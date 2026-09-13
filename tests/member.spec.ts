@@ -1,3 +1,4 @@
+import { registrationCode } from "./registration";
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { today } from "../frontend/src/types";
@@ -7,7 +8,7 @@ async function member(request: APIRequestContext) {
   expect(
     (
       await request.post("/api/auth/register", {
-        data: {
+        data: { ...(await registrationCode()),
           name: "Khách kiểm thử API",
           email,
           password: "A flower account password!",

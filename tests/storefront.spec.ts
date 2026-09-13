@@ -1,8 +1,9 @@
+import { registrationCode } from "./registration";
 import { test, expect } from "@playwright/test";
 async function registerMember(page: import("@playwright/test").Page) {
   const email = `test-ui-${Date.now()}@example.com`;
   const response = await page.request.post("/api/auth/register", {
-    data: { name: "Khách kiểm thử API", email, password: "TestPassword123!" },
+    data: { ...(await registrationCode()), name: "Khách kiểm thử API", email, password: "TestPassword123!" },
   });
   expect(response.status()).toBe(201);
   return email;
@@ -103,18 +104,29 @@ test("checkout requires login, preserves cart and tracks a member order", async 
     .locator(".detail-actions")
     .getByRole("button", { name: "Thêm vào giỏ hoa", exact: true })
     .click();
-  await page.goto("/thanh-toan");
   await expect(page).toHaveURL(/dang-nhap\?next=/);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("nh-cart") || "[]"))).toEqual([]);
   await page.getByRole("link", { name: "Đăng ký ngay", exact: true }).click();
   await page.getByLabel("Tên của bạn").fill("Khách kiểm thử API");
   await page
     .getByLabel("Email", { exact: true })
     .fill(`test-ui-${Date.now()}@example.com`);
   await page.getByLabel("Mật khẩu", { exact: true }).fill("TestPassword123!");
+  const verification = await registrationCode();
+  await page.route("**/api/auth/send-phone-code", (route) => route.fulfill({ json: { ok: true } }));
+  await page.getByLabel("Số điện thoại", { exact: true }).fill(verification.phone);
+  await page.getByRole("button", { name: "Gửi mã xác minh SMS" }).click();
+  await page.getByLabel("Mã xác minh SMS", { exact: true }).fill(verification.phoneCode);
   await page
     .getByRole("button", { name: "Tạo tài khoản", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/thanh-toan$/);
+  await expect(page).toHaveURL(/\/hoa\/som-mai$/);
+  await page.locator(".detail-actions").getByRole("button", { name: "Thêm vào giỏ hoa", exact: true }).click();
+  await page.goto("/gio-hang");
+  await expect(page.locator(".cart-item")).toHaveCount(1);
+  await page.reload();
+  await expect(page.locator(".cart-item")).toHaveCount(1);
+  await page.goto("/thanh-toan");
   await page.getByLabel("Tên người nhận").fill("Khách kiểm thử tự động");
   await page.getByLabel("Số điện thoại").fill("0901234567");
   await page.getByLabel("Email nhận thông tin đơn").fill("e2e@example.com");

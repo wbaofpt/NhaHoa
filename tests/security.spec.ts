@@ -1,3 +1,4 @@
+import { registrationCode } from "./registration";
 import { test, expect, type APIRequestContext } from "@playwright/test";
 const headers = { "X-NhaHoa-Request": "web" };
 const baseURL = process.env.E2E_BASE_URL;
@@ -7,7 +8,7 @@ async function register(context: APIRequestContext) {
   expect(
     (
       await context.post("/api/auth/register", {
-        data: { name: "Khách kiểm thử API", email, password },
+        data: { ...(await registrationCode()), name: "Khách kiểm thử API", email, password },
       })
     ).status(),
   ).toBe(201);

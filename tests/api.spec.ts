@@ -1,3 +1,4 @@
+import { registrationCode } from "./registration";
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { parse } from "dotenv";
@@ -13,7 +14,7 @@ test("authentication, access control, server pricing, stock and cancellation", a
   expect((await request.get("/api/admin/products")).status()).toBe(401);
   const email = `test-${Date.now()}@example.com`;
   const register = await request.post("/api/auth/register", {
-    data: { name: "Khách kiểm thử API", email, password: "TestPassword123!" },
+    data: { ...(await registrationCode()), name: "Khách kiểm thử API", email, password: "TestPassword123!" },
   });
   expect(register.status()).toBe(201);
   const me = await (await request.get("/api/auth/me")).json();

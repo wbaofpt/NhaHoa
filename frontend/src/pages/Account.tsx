@@ -82,7 +82,7 @@ export function Auth({ register = false }: { register?: boolean }) {
     try {
       const result = await api<User>(
         "/auth/" + (register ? "register" : "login"),
-        post(register ? { ...form, phone, phoneCode } : form),
+        post(register ? { ...form, phone, phoneCode } : { identifier: form.email, password: form.password }),
       );
       setUser(result);
       navigate(destination);
@@ -145,10 +145,13 @@ export function Auth({ register = false }: { register?: boolean }) {
               />
             </label>
           )}
-          <label className="field">
-            Email
-            <span className="verification-input"><input type="email" required autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />{register && <button type="button" className="button outline small" onClick={() => void sendCode()} disabled={sendingCode}>{sendingCode ? "Đang gửi…" : codeSent ? "Gửi lại mã" : "Gửi mã"}</button>}</span>
-          </label>
+          <div className="field">
+            <label htmlFor="auth-identifier">{register ? "Email" : "Email hoặc số điện thoại"}</label>
+            <div className="verification-input">
+              <input id="auth-identifier" type={register ? "email" : "text"} required autoComplete={register ? "email" : "username"} autoCapitalize="none" spellCheck={false} maxLength={190} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              {register && <button type="button" className="button outline small" onClick={() => void sendCode()} disabled={sendingCode}>{sendingCode ? "Đang gửi…" : codeSent ? "Gửi lại mã" : "Gửi mã"}</button>}
+            </div>
+          </div>
           {register && codeSent && <label className="field">Mã xác nhận email<input inputMode="numeric" maxLength={6} value={verificationCode} onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="Nhập mã 6 số" /></label>}
           {register && (
             <>
@@ -242,7 +245,7 @@ export function Auth({ register = false }: { register?: boolean }) {
               {error}
             </p>
           )}
-          <button className="button" disabled={busy}>
+          <button className="button" disabled={busy || authLoading}>
             {busy ? "Đang xử lý…" : register ? "Tạo tài khoản" : "Đăng nhập"}
             <ArrowUpRight size={18} />
           </button>

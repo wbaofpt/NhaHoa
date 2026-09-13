@@ -6,7 +6,7 @@ test("admin can sign in and edit a flower through the interface", async ({
   page,
 }) => {
   await page.goto("/dang-nhap?next=/quan-tri");
-  await page.getByLabel("Email", { exact: true }).fill(env.ADMIN_EMAIL);
+  await page.getByLabel("Email hoặc số điện thoại", { exact: true }).fill(env.ADMIN_EMAIL);
   await page.getByLabel("Mật khẩu", { exact: true }).fill(env.ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(/\/quan-tri$/);
