@@ -22,9 +22,15 @@ export const newPassword = z
     (v) => Buffer.byteLength(v, "utf8") <= 72,
     "Mật khẩu không được vượt quá 72 byte UTF-8.",
   );
+export const registrationPhone = z.string().trim()
+  .transform((value) => value.replace(/[\s()-]/g, ""))
+  .pipe(z.string().regex(/^(?:0|\+84)[35789][0-9]{8}$/, "Số điện thoại di động không hợp lệ."))
+  .transform((value) => value.startsWith("0") ? `+84${value.slice(1)}` : value);
 export const registration = credentials.extend({
   name: z.string().trim().min(2).max(100),
   password: newPassword,
+  phone: registrationPhone,
+  phoneCode: z.string().regex(/^\d{6}$/, "Nhập mã xác minh SMS gồm 6 số."),
 });
 export const productInput = z.object({
   name: z.string().trim().min(2).max(150),
@@ -52,6 +58,7 @@ export const productInput = z.object({
         /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(v),
       "Ảnh phải là đường dẫn /images/, HTTPS hoặc JPEG/PNG/WebP tải lên",
     ),
+  images: z.array(z.string().max(2500000)).max(6).optional(),
   description: z.string().trim().min(10).max(5000),
   flowers: z.string().min(2).max(255),
   badge: z.string().max(40).nullable().default(null),

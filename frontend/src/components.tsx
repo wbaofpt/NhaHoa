@@ -25,9 +25,33 @@ import { api, post, money, type Product } from "./types";
 export function SupportFloat() {
   const zalo = import.meta.env.VITE_ZALO_URL || "https://zalo.me/0900000000";
   const phone = import.meta.env.VITE_SUPPORT_PHONE || "0900000000";
-  return <div className="support-float" aria-label="Liên hệ hỗ trợ"><a href={zalo} target="_blank" rel="noreferrer" aria-label="Chat Zalo"><MessageCircle size={20} /><span>Zalo</span></a><a href={`tel:${phone}`} aria-label="Gọi điện hỗ trợ"><Phone size={19} /><span>Gọi ngay</span></a></div>;
-}
-export function Logo({ light = false }: { light?: boolean }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className={`support-float ${open ? "is-open" : ""}`}>
+      <div className="support-links" aria-hidden={!open}>
+        <a href={zalo} target="_blank" rel="noreferrer" aria-label="Chat Zalo" tabIndex={open ? 0 : -1}>
+          <MessageCircle size={19} />
+          <span>Zalo</span>
+        </a>
+        <a href={`tel:${phone}`} aria-label="Gọi điện hỗ trợ" tabIndex={open ? 0 : -1}>
+          <Phone size={18} />
+          <span>Gọi ngay</span>
+        </a>
+      </div>
+      <button
+        className="support-toggle"
+        type="button"
+        aria-label={open ? "Đóng liên hệ hỗ trợ" : "Mở liên hệ hỗ trợ"}
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <MessageCircle className="support-toggle-chat" size={22} />
+        <X className="support-toggle-close" size={21} />
+      </button>
+    </div>
+  );
+}export function Logo({ light = false }: { light?: boolean }) {
   return (
     <Link
       className={`logo ${light ? "light" : ""}`}
@@ -163,7 +187,7 @@ export function Header() {
               autoFocus
             />
             {suggestionsOpen && query.trim() && <div className="search-suggestions" role="listbox">
-              {products.filter((product) => `${product.name} ${product.category} ${product.occasion}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).slice(0, 6).map((product) => <button type="button" key={product.id} role="option" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQuery(product.name); setSuggestionsOpen(false); }}><img src={product.image} alt="" /><span><strong>{product.name}</strong><small>{product.category} {"\u00b7"} {product.occasion}</small></span></button>)}
+              {products.filter((product) => `${product.name} ${product.category} ${product.occasion}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).slice(0, 6).map((product) => <button type="button" key={product.id} role="option" onMouseDown={(e) => e.preventDefault()} onClick={() => { setSuggestionsOpen(false); setSearch(false); navigate(`/hoa/${product.slug}`); }}><img src={product.image} alt="" /><span><strong>{product.name}</strong><small>{product.category} {"\u00b7"} {product.occasion}</small></span></button>)}
               {!products.some((product) => `${product.name} ${product.category} ${product.occasion}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())) && <p>{"\u0043h\u01b0a t\u00ecm th\u1ea5y m\u1eabu hoa ph\u00f9 h\u1ee3p."}</p>}
             </div>}
             </div>
@@ -177,6 +201,8 @@ export function Header() {
   );
 }
 export function Footer() {
+  const [footerSettings, setFooterSettings] = useState<Record<string, any>>(() => { try { return JSON.parse(localStorage.getItem("nha-hoa-admin-settings") || "{}"); } catch { return {}; } });
+  useEffect(() => { const sync = () => { try { setFooterSettings(JSON.parse(localStorage.getItem("nha-hoa-admin-settings") || "{}")); } catch {} }; window.addEventListener("storage", sync); window.addEventListener("nha-hoa-settings", sync); return () => { window.removeEventListener("storage", sync); window.removeEventListener("nha-hoa-settings", sync); }; }, []);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -254,7 +280,7 @@ export function Footer() {
           <p>
             Tiệm hoa trực tuyến
             <br />
-            Giao hoa khu vực TP. Hồ Chí Minh
+            {(footerSettings.addresses?.length ? footerSettings.addresses : [footerSettings.address || "TP. Ho Chi Minh"]).map((address: string, index: number) => <span key={index}>{address}{index < (footerSettings.addresses?.length || 1) - 1 ? <br /> : null}</span>)}
           </p>
           <p>Nhận đơn mỗi ngày · 8:00 – 20:00</p>
           <Link className="text-link" to="/lien-he">

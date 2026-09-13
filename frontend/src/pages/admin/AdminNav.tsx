@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ClipboardList,
   Flower2,
+  ImagePlus,
   LayoutDashboard,
   Mail,
   MessageSquare,
@@ -16,6 +17,8 @@ import {
 
 const items = [
   ["/quan-tri", "Tổng quan", LayoutDashboard],
+  ["/quan-tri/banner", "Banner", ImagePlus],
+  ["/quan-tri/stories", "Câu chuyện", ClipboardList],
   ["/quan-tri/products", "Sản phẩm", Flower2],
   ["/quan-tri/orders", "Đơn hàng", Boxes],
   ["/quan-tri/inquiries", "Lời nhắn", MessageSquare],
@@ -35,7 +38,7 @@ export function AdminNav() {
   const navigate = useNavigate();
   return (
     <nav className="admin-nav" aria-label="Quản trị">
-      {items.map(([to, label, Icon], index) => index < 4 ? (
+      {items.map(([to, label, Icon]) => ["/quan-tri", "/quan-tri/products", "/quan-tri/orders", "/quan-tri/inquiries"].includes(to) ? (
         <button
           key={to}
           className={location.pathname === to ? "active" : ""}

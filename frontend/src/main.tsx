@@ -27,6 +27,8 @@ import AdminManagement from "./pages/admin/AdminManagement";
 import AdminExtra from "./pages/admin/AdminExtra";
 import AdminAccess from "./pages/admin/AdminAccess";
 import AdminCategories from "./pages/admin/AdminCategories";
+import AdminBanner from "./pages/admin/AdminBanner";
+import AdminStories from "./pages/admin/AdminStories";
 import {
   Services,
   ServiceDetail,
@@ -199,7 +201,14 @@ function App() {
                   </AuthGate>
                 }
               />
-              <Route path="/gio-hang" element={<Cart />} />
+              <Route
+                path="/gio-hang"
+                element={
+                  <AuthGate>
+                    <Cart />
+                  </AuthGate>
+                }
+              />
               <Route
                 path="/thanh-toan"
                 element={
@@ -251,6 +260,8 @@ function App() {
                 }
               />
               <Route path="/quan-tri/categories" element={<AdminAccess><AdminCategories /></AdminAccess>} />
+              <Route path="/quan-tri/banner" element={<AdminAccess><AdminBanner /></AdminAccess>} />
+              <Route path="/quan-tri/stories" element={<AdminAccess><AdminStories /></AdminAccess>} />
               <Route
                 path="/quan-tri/customers"
                 element={

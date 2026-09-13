@@ -7,6 +7,7 @@ import {
   todayVN,
   registration,
   productInput,
+  registrationPhone,
 } from "./validation.js";
 test("shipping fee threshold and total are calculated using integer VND", () => {
   assert.deepEqual(totals([{ price: 350000, quantity: 2 }]), {
@@ -31,7 +32,7 @@ const valid = {
   items: [{ product_id: 1, quantity: 1 }],
 };
 test("registration requires a long password and rejects bcrypt truncation", () => {
-  const user = { name: "Khách kiểm thử", email: "test@example.com" };
+  const user = { name: "Khách kiểm thử", email: "test@example.com", phone: "0901234567", phoneCode: "123456" };
   assert.equal(
     registration.safeParse({ ...user, password: "shortpass" }).success,
     false,
@@ -45,6 +46,17 @@ test("registration requires a long password and rejects bcrypt truncation", () =
       .success,
     true,
   );
+});
+test("registration normalizes Vietnamese mobile numbers and requires SMS verification", () => {
+  for (const value of ["0901234567", "+84901234567", "090 123 4567", " (090) 123-4567 "])
+    assert.equal(registrationPhone.parse(value), "+84901234567");
+  for (const value of ["123", "+12025550123", "0241234567", "09012345678"])
+    assert.equal(registrationPhone.safeParse(value).success, false);
+  const user = { name: "Test User", email: "test@example.com", password: "My quiet garden blooms!", phone: "0901234567", phoneCode: "123456" };
+  assert.equal(registration.safeParse(user).success, true);
+  for (const phoneCode of [undefined, "", "12345", "1234567", "abcdef"])
+    assert.equal(registration.safeParse({ ...user, phoneCode }).success, false);
+  assert.equal(registration.safeParse({ ...user, phone: undefined }).success, false);
 });
 test("checkout rejects zero, negative, excessive and duplicate quantities", () => {
   for (const quantity of [0, -1, 21, 1.5])

@@ -85,18 +85,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const expire = () => {
       setUser(null);
+      if (!window.location.pathname.startsWith("/dang-nhap")) window.location.assign("/dang-nhap?expired=1");
       setNotice("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
     };
     window.addEventListener("nh-session-expired", expire);
     return () => window.removeEventListener("nh-session-expired", expire);
   }, []);
-  useEffect(() => {
+   useEffect(() => {
+    if (!user) return;
+    const checkSession = async () => {
+      try { const current = await api<User | null>("/auth/me"); if (!current || current.id !== user.id) window.dispatchEvent(new Event("nh-session-expired")); }
+      catch { window.dispatchEvent(new Event("nh-session-expired")); }
+    };
+    const timer = window.setInterval(() => void checkSession(), 5000);
+    return () => window.clearInterval(timer);
+  }, [user?.id]); useEffect(() => {
     if (notice) {
       const timer = setTimeout(() => setNotice(""), 3500);
       return () => clearTimeout(timer);
     }
   }, [notice]);
   const add = (product: Product, count = 1) => {
+    if (authLoading) {
+      setNotice("Đang kiểm tra đăng nhập. Vui lòng chờ một chút.");
+      return;
+    }
+    if (!user) {
+      setNotice("Vui lòng đăng nhập để thêm hoa vào giỏ hàng.");
+      navigate(
+        "/dang-nhap?next=" +
+          encodeURIComponent(location.pathname + location.search),
+      );
+      return;
+    }
     if (!product.stock) return;
     setCart((old) => {
       const item = old.find((i) => i.product.id === product.id);
@@ -114,7 +135,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setNotice(`Đã thêm ${product.name} vào giỏ hoa`);
   };
   const quantity = (id: number, count: number) =>
-    setCart((old) =>
+    user && !authLoading && setCart((old) =>
       count < 1
         ? old.filter((i) => i.product.id !== id)
         : old.map((i) =>
@@ -165,7 +186,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         loading,
         error,
         reload,
-        cart,
+        cart: user && !authLoading ? cart : [],
         add,
         quantity,
         clear: () => setCart([]),

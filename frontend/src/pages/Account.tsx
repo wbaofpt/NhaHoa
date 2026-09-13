@@ -29,17 +29,60 @@ export function Auth({ register = false }: { register?: boolean }) {
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneCode, setPhoneCode] = useState("");
+  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
+  const [sendingPhoneCode, setSendingPhoneCode] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  const [smsCooldown, setSmsCooldown] = useState(0);
+  useEffect(() => {
+    if (!smsCooldown) return;
+    const timer = window.setTimeout(() => setSmsCooldown(smsCooldown - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [smsCooldown]);
+  const sendPhoneCode = async () => {
+    if (!/^(?:0|\+84)[35789][0-9]{8}$/.test(phone.replace(/[\s()-]/g, ""))) {
+      setPhoneError("Nhập số di động Việt Nam hợp lệ, ví dụ 0901234567.");
+      return;
+    }
+    setSendingPhoneCode(true);
+    setPhoneError("");
+    try {
+      await api("/auth/send-phone-code", post({ phone }));
+      setPhoneCodeSent(true);
+      setPhoneCode("");
+      setSmsCooldown(60);
+    } catch (e) {
+      setPhoneError((e as Error).message);
+    } finally {
+      setSendingPhoneCode(false);
+    }
+  };
+  const sendCode = async () => {
+    if (!form.email) return setError("Vui lòng nhập email trước.");
+    setSendingCode(true);
+    try { await api("/auth/send-email-code", post({ email: form.email })); setCodeSent(true); setError(""); }
+    catch (e) { setError((e as Error).message); }
+    finally { setSendingCode(false); }
+  };
   useEffect(() => {
     if (user && !authLoading) navigate(destination, { replace: true });
   }, [user, authLoading, destination, navigate]);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (register && (!phoneCodeSent || !/^\d{6}$/.test(phoneCode))) {
+      setPhoneError("Vui lòng gửi và nhập mã SMS gồm 6 số trước khi tạo tài khoản.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       const result = await api<User>(
         "/auth/" + (register ? "register" : "login"),
-        post(form),
+        post(register ? { ...form, phone, phoneCode } : form),
       );
       setUser(result);
       navigate(destination);
@@ -77,7 +120,9 @@ export function Auth({ register = false }: { register?: boolean }) {
           {next && !register && (
             <p className="soft-note">
               Đăng nhập để tiếp tục{" "}
-              {next.startsWith("/thanh-toan")
+              {next.startsWith("/gio-hang")
+                ? "xem giỏ hoa"
+                : next.startsWith("/thanh-toan")
                 ? "đặt hoa"
                 : next.startsWith("/yeu-thich")
                   ? "lưu những bó hoa yêu thích"
@@ -102,14 +147,64 @@ export function Auth({ register = false }: { register?: boolean }) {
           )}
           <label className="field">
             Email
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
+            <span className="verification-input"><input type="email" required autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />{register && <button type="button" className="button outline small" onClick={() => void sendCode()} disabled={sendingCode}>{sendingCode ? "Đang gửi…" : codeSent ? "Gửi lại mã" : "Gửi mã"}</button>}</span>
           </label>
+          {register && codeSent && <label className="field">Mã xác nhận email<input inputMode="numeric" maxLength={6} value={verificationCode} onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="Nhập mã 6 số" /></label>}
+          {register && (
+            <>
+              <div className="field">
+                <label htmlFor="registration-phone">Số điện thoại</label>
+                <div className="verification-input">
+                  <input
+                    id="registration-phone"
+                    type="tel"
+                    autoComplete="tel"
+                    required
+                    maxLength={25}
+                    placeholder="0901234567"
+                    value={phone}
+                    disabled={sendingPhoneCode || busy}
+                    aria-invalid={!!phoneError}
+                    aria-describedby={phoneError ? "registration-phone-error" : "registration-phone-help"}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      setPhoneCodeSent(false);
+                      setPhoneCode("");
+                      setPhoneError("");
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="button outline small"
+                    onClick={() => void sendPhoneCode()}
+                    disabled={sendingPhoneCode || smsCooldown > 0 || busy}
+                    aria-label="Gửi mã xác minh SMS"
+                  >
+                    {sendingPhoneCode ? "Đang gửi…" : smsCooldown > 0 ? `Gửi lại (${smsCooldown}s)` : phoneCodeSent ? "Gửi lại SMS" : "Gửi mã SMS"}
+                  </button>
+                </div>
+                <small id="registration-phone-help" role="status">
+                  {phoneCodeSent ? "Đã gửi mã SMS. Mã có hiệu lực trong 10 phút." : "Nhận mã SMS để xác minh số điện thoại của bạn."}
+                </small>
+                {phoneError && <p id="registration-phone-error" className="form-error" role="alert">{phoneError}</p>}
+              </div>
+              {phoneCodeSent && (
+                <label className="field">
+                  Mã xác minh SMS
+                  <input
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    required
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={phoneCode}
+                    onChange={(e) => setPhoneCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="Nhập mã 6 số"
+                  />
+                </label>
+              )}
+            </>
+          )}
           <label className="field">
             Mật khẩu
             <span className="password-input">

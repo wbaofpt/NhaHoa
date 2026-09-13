@@ -182,13 +182,15 @@ export function Blog() {
   const [params, setParams] = useSearchParams();
   const query = params.get("q") || "";
   const category = params.get("chu-de") || "";
+  const customArticles = (() => { try { return JSON.parse(localStorage.getItem("nha-hoa-articles") || "[]"); } catch { return []; } })();
+  const allArticles = [...customArticles, ...articles.filter((article) => !customArticles.some((item: { slug: string }) => item.slug === article.slug))];
   const normalize = (text: string) =>
     text
       .toLocaleLowerCase("vi")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/đ/g, "d");
-  const shown = articles.filter(
+  const shown = allArticles.filter(
     (a) =>
       (!category || a.category === category) &&
       normalize(a.title + " " + a.intro).includes(normalize(query)),
@@ -223,7 +225,7 @@ export function Blog() {
             onChange={(e) => update("chu-de", e.target.value)}
           >
             <option value="">Tất cả chủ đề</option>
-            {Array.from(new Set(articles.map((a) => a.category))).map((c) => (
+            {Array.from(new Set(allArticles.map((a) => a.category))).map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
@@ -339,9 +341,13 @@ export function Contact() {
     name: "",
     email: "",
     message: requested
-      ? `Mình muốn được tư vấn: ${requested.name}.\nNgày cần hoa: \nNgân sách dự kiến: \nĐịa điểm và mong muốn: `
+      ? `Mình muốn được tư vấn: ${requested.name}.
+Ngày cần hoa: 
+Ngân sách dự kiến: 
+Địa điểm và mong muốn: `
       : orderCode
-        ? `Mình cần hỗ trợ đơn ${orderCode}.\nNội dung cần hỗ trợ: `
+        ? `Mình cần hỗ trợ đơn ${orderCode}.
+Nội dung cần hỗ trợ: `
         : "",
   });
   const [result, setResult] = useState("");

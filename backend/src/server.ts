@@ -37,7 +37,12 @@ import {
   totals,
   transitions,
   newPassword,
+  registrationPhone,
 } from "./validation.js";
+import { consumePhoneCode, requestPhoneCode, PhoneVerificationError, type PhoneCode } from "./phone-verification.js";
+const phoneCodes = db.collection<PhoneCode>("phone_verification_codes");
+import { code as createVerificationCode, digest as digestVerificationCode, sendEmailCode } from "./verification.js";
+const emailCodes = new Map<string, { hash: string; expires: number; sentAt: number }>();
 const app = express();
 app.use(
   helmet({
@@ -55,7 +60,7 @@ app.use(
     },
   }),
 );
-app.use(express.json({ limit: "3mb" }));
+app.use(express.json({ limit: "12mb" }));
 app.use(cookieParser());
 const origins = new Set([
   process.env.FRONTEND_ORIGIN || "http://127.0.0.1:5173",
@@ -201,12 +206,30 @@ app.get("/api/products/:slug", async (req, res) => {
     ? res.json(product)
     : res.status(404).json({ error: "Không tìm thấy mẫu hoa." });
 });
+app.post("/api/auth/send-email-code", authLimiter, async (req, res) => {
+  const address = email.parse(req.body?.email);
+  const previous = emailCodes.get(address);
+  if (previous && Date.now() - previous.sentAt < 60000) return res.status(429).json({ error: "Vui lòng chờ một phút trước khi gửi lại mã." });
+  const value = createVerificationCode();
+  await sendEmailCode(address, value);
+  emailCodes.set(address, { hash: digestVerificationCode(value), expires: Date.now() + 600000, sentAt: Date.now() });
+  res.json({ ok: true });
+});
+app.post("/api/auth/send-phone-code", authLimiter, async (req, res) => {
+  const phone = registrationPhone.parse(req.body?.phone);
+  await requestPhoneCode(phoneCodes, phone);
+  res.json({ ok: true });
+});
 app.post("/api/auth/register", authLimiter, async (req, res) => {
   const input = registration.parse(req.body);
+  if (await users.findOne({ email: input.email }))
+    throw new Conflict("Email đã tồn tại.");
+  await consumePhoneCode(phoneCodes, input.phone, input.phoneCode);
   const user: User = {
     id: await nextId("users"),
     name: input.name,
     email: input.email,
+    phone: input.phone,
     password_hash: await bcrypt.hash(input.password, 12),
     role: "customer",
     created_at: new Date(),
@@ -623,6 +646,8 @@ app.use("/api", (_req, res) =>
   res.status(404).json({ error: "API không tồn tại." }),
 );
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (error instanceof PhoneVerificationError)
+    return res.status(error.status).json({ error: error.message });
   if (error instanceof ZodError)
     return res.status(400).json({
       error: "Vui lòng kiểm tra thông tin đã nhập.",
@@ -652,6 +677,7 @@ if (process.env.NODE_ENV === "production") {
 }
 try {
   await client.connect();
+  await phoneCodes.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   await db.command({ ping: 1 });
   const server = app.listen(Number(process.env.PORT || 4000), "127.0.0.1", () =>
     console.log(

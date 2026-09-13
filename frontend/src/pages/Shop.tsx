@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -8,6 +8,8 @@ import {
   Truck,
   Flower2,
   Check,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useStore } from "../store";
 import {
@@ -174,7 +176,15 @@ export function ProductDetail() {
   const { slug } = useParams();
   const { products, add, favorites, favorite } = useStore();
   const [count, setCount] = useState(1);
+  const [activeIndex, setActiveIndex] = useState(0);
   const p = products.find((p) => p.slug === slug);
+  const gallery = p ? [p.image, ...(p.images || []).filter((image) => image !== p.image)] : [];
+  useEffect(() => {
+    setActiveIndex(0);
+    if (gallery.length < 2) return;
+    const timer = window.setInterval(() => setActiveIndex((index) => (index + 1) % gallery.length), 4200);
+    return () => window.clearInterval(timer);
+  }, [p?.slug, gallery.length]);
   return (
     <CatalogState>
       {p ? (
@@ -188,7 +198,11 @@ export function ProductDetail() {
           </div>
           <section className="detail-layout wrap">
             <div className="detail-image">
-              <img src={p.image} alt={p.name} />
+              <div className="detail-image-main">
+                <img key={gallery[activeIndex] || p.image} className="gallery-image-enter" src={gallery[activeIndex] || p.image} alt={p.name} />
+                {gallery.length > 1 && <><button type="button" className="gallery-arrow gallery-prev" aria-label="Ảnh trước" onClick={() => setActiveIndex((activeIndex - 1 + gallery.length) % gallery.length)}><ChevronLeft size={20} /></button><button type="button" className="gallery-arrow gallery-next" aria-label="Ảnh tiếp theo" onClick={() => setActiveIndex((activeIndex + 1) % gallery.length)}><ChevronRight size={20} /></button></>}
+              </div>
+              {gallery.length > 1 && <div className="product-gallery">{gallery.map((image, index) => <button type="button" className={index === activeIndex ? "active" : ""} key={image} onClick={() => setActiveIndex(index)}><img src={image} alt="" /></button>)}</div>}
               {p.badge && <span className="product-badge">{p.badge}</span>}
             </div>
             <div className="detail-copy">

@@ -82,6 +82,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
+  const [productCategories] = useState<string[]>(() => { try { const saved = JSON.parse(localStorage.getItem("nha-hoa-admin-categories") || "null"); return Array.isArray(saved) && saved.length ? saved : categories.slice(1); } catch { return categories.slice(1); } });
   const [notice, setNotice] = useState("");
   const resolveInquiry = async (inquiry: Inquiry) => {
     setBusy(true);
@@ -290,38 +291,34 @@ export default function Admin() {
                         />
                       </label>
                     ))}
-                    <label className="field full">
-                      Ảnh sản phẩm
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          try {
-                            setEditing({
-                              ...editing,
-                              image: await imageFile(file),
-                            });
-                          } catch (error) {
-                            setError((error as Error).message);
-                            e.currentTarget.value = "";
-                          }
-                        }}
-                      />
-                      <small>
-                        JPEG, PNG hoặc WebP · tối đa 1,5MB. Ảnh hiện tại vẫn
-                        được giữ nếu bạn không chọn ảnh mới.
-                      </small>
-                      {editing.image && (
-                        <img
-                          className="admin-image-preview"
-                          src={String(editing.image)}
-                          alt="Xem trước ảnh sản phẩm"
-                        />
-                      )}
-                    </label>
-                    <label className="field full">
+                    <div className="field full">
+                      Anh san pham
+                      <input type="file" id="product-images" accept="image/jpeg,image/png,image/webp" multiple onChange={async (e) => {
+                        const input = e.currentTarget;
+                        const files = Array.from(input.files || []);
+                        if (!files.length) return;
+                        try {
+                          const existing = editing.images?.length ? editing.images : editing.image ? [String(editing.image)] : [];
+                          const uploaded = await Promise.all(files.slice(0, Math.max(0, 6 - existing.length)).map(imageFile));
+                          const images = [...existing, ...uploaded];
+                          setEditing({ ...editing, image: images[0], images });
+                          input.value = "";
+                        } catch (error) { setError((error as Error).message); input.value = ""; }
+                      }} />
+                      <small>JPEG, PNG hoac WebP · toi da 1,5MB. Co the chon toi da 6 anh.</small>
+                      <div className="admin-image-previews">
+                        {(editing.images?.length ? editing.images : editing.image ? [String(editing.image)] : []).map((image, index, allImages) => (
+                          <div className="admin-image-preview-wrap" key={image + index}>
+                            <img className="admin-image-preview" src={image} alt={`Xem truoc anh ${index + 1}`} />
+                            <button type="button" className="admin-image-remove" aria-label={`Xoa anh ${index + 1}`} onClick={() => {
+                              const images = allImages.filter((_, imageIndex) => imageIndex !== index);
+                              setEditing({ ...editing, image: images[0] || "", images });
+                            }}><Trash2 size={14} /></button>
+                          </div>
+                        ))}
+                        {((editing.images?.length || (editing.image ? 1 : 0)) < 6) && <label className="admin-image-add" htmlFor="product-images" aria-label="Them anh san pham"><Plus size={24} /></label>}
+                      </div>
+                    </div>                    <label className="field full">
                       Nhãn sản phẩm (badge)
                       <input
                         maxLength={40}
@@ -336,14 +333,14 @@ export default function Admin() {
                       />
                     </label>
                     <label className="field">
-                      Kiểu dáng
+                      Danh m&#x1EE5;c
                       <select
                         value={editing.category}
                         onChange={(e) =>
                           setEditing({ ...editing, category: e.target.value })
                         }
                       >
-                        {categories.slice(1).map((c) => (
+                        {productCategories.map((c) => (
                           <option key={c}>{c}</option>
                         ))}
                       </select>
@@ -376,6 +373,9 @@ export default function Admin() {
                           })
                         }
                       />
+                    </label>                    <label className="field">
+                      {"Gi\u00e1 g\u1ed1c (\u0111\u1ec3 hi\u1ec3n th\u1ecb gi\u00e1 gi\u1ea3m)"}
+                      <input type="number" min={10000} max={50000000} value={editing.old_price ?? ""} placeholder={"\u0110\u1ec3 tr\u1ed1ng n\u1ebfu kh\u00f4ng gi\u1ea3m"} onChange={(e) => setEditing({ ...editing, old_price: e.target.value ? Number(e.target.value) : null })} />
                     </label>
                     <label className="field">
                       Tồn kho

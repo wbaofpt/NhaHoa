@@ -23,6 +23,7 @@ export function HomeWelcome() {
     }
   });
   const [finished, setFinished] = useState(false);
+  const [minimumDone, setMinimumDone] = useState(false);
   useEffect(() => {
     try {
       sessionStorage.setItem("nh-welcome-seen", "1");
@@ -31,9 +32,13 @@ export function HomeWelcome() {
     }
   }, []);
   useEffect(() => {
-    if (!loading || pathname !== "/") setFinished(true);
-  }, [loading, pathname]);
-  return eligible && !finished && loading && pathname === "/" ? (
+    const timer = window.setTimeout(() => setMinimumDone(true), 1100);
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if ((!loading && minimumDone) || pathname !== "/") setFinished(true);
+  }, [loading, minimumDone, pathname]);
+  return eligible && !finished && pathname === "/" ? (
     <BloomLoader fullscreen label="Chào bạn đến với Nhà Hoa…" />
   ) : null;
 }

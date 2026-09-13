@@ -12,24 +12,21 @@ import {
 import { categories } from "../types";
 export default function Home() {
   const { products } = useStore();
+  const [banner] = useState(() => { try { return JSON.parse(localStorage.getItem("nha-hoa-home-banner") || "{}"); } catch { return {}; } });
   const [category, setCategory] = useState("Tất cả");
   return (
     <>
       <section className="hero">
         <div className="hero-copy">
           <div className="hero-kicker">
-            <span /> MỘT CHÚT HOA, THÊM YÊU ĐỜI
+            <span /> {banner.kicker || "\u004d\u1ed8\u0054 \u0043\u0048\u00da\u0054 HOA, TH\u00caM Y\u00caU \u0110\u1edcI"}
           </div>
           <h1>
-            Gửi hoa,
-            <br />
-            gửi cả <em>tấm lòng.</em>
+            {banner.title || "G\u1eedi hoa,"}<br />
+            <em>{banner.titleAccent || "g\u1eedi c\u1ea3 t\u1ea5m l\u00f2ng."}</em>
           </h1>
           <p>
-            Có những điều, một bó hoa sẽ nói thay bạn.
-            <br />
-            Để Nhà Hoa gói ghém yêu thương, gửi đến
-            <br className="desktop-br" /> người bạn trân quý.
+            {banner.description || "C\u00f3 nh\u1eefng \u0111i\u1ec1u, m\u1ed9t b\u00f3 hoa s\u1ebd n\u00f3i thay b\u1ea1n."}
           </p>
           <div className="hero-buttons">
             <ButtonLink to="/hoa">Chọn một bó hoa</ButtonLink>
@@ -53,7 +50,7 @@ export default function Home() {
           </div>
           <img
             className="hero-photo"
-            src="/images/hero.jpg"
+            src={banner.image || "/images/hero.jpg"}
             alt="Bó hoa tươi nhiều sắc màu được gói giấy thủ công"
             fetchPriority="high"
             width="1600"
@@ -69,13 +66,13 @@ export default function Home() {
             </span>
           </div>
           <div className="hero-note">
-            <span>THE EVERYDAY COLLECTION</span>
+            <span>{banner.noteLabel || "THE EVERYDAY COLLECTION"}</span>
             <p>
               Những điều nhỏ.
               <br />
               <em>Niềm vui thật to.</em>
             </p>
-            <Link to="/bo-suu-tap" aria-label="Khám phá bộ sưu tập">
+            <Link to={banner.noteLink || "/bo-suu-tap"} aria-label="Khám phá bộ sưu tập">
               <ArrowUpRight size={25} />
             </Link>
           </div>
