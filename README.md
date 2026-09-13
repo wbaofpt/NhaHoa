@@ -103,12 +103,12 @@ Khách có thể xem/tìm hoa, thêm vào giỏ, đọc bài và gửi liên h�
 - Các khối nội dung hiện dần khi vào màn hình bằng IntersectionObserver; cánh hoa banner chạy một lượt, phản hồi yêu thích/nút/menu bằng transform/opacity. Reduced motion giữ nội dung hiển thị, tắt hiệu ứng không thiết yếu.
 - Collection `favorites` dùng unique index `user_id + product_id`; yêu thích đồng bộ theo tài khoản, không chia sẻ giữa người dùng cùng trình duyệt.
 - Tất cả API ghi yêu cầu JSON và header `X-NhaHoa-Request: web`, từ chối origin lạ và Fetch Metadata `cross-site`. Không bật CORS cho bên thứ ba. Đây là biện pháp CSRF cho API cùng origin, không phải thông tin đăng nhập.
-- Mật khẩu mới ít nhất 15 ký tự, tối đa 72 byte UTF-8 theo giới hạn bcrypt. Đổi mật khẩu cần mật khẩu hiện tại và thu hồi mọi phiên. `session_version` bảo đảm phiên cũ không sống lại khi có yêu cầu đăng nhập đồng thời. `/auth/logout-all` cũng thu hồi tất cả thiết bị.
+- Mật khẩu tối thiểu 8 ký tự, tối đa 72 byte UTF-8 theo giới hạn bcrypt. Đổi mật khẩu cần mật khẩu hiện tại và thu hồi mọi phiên.
 - Giới hạn theo IP cho API, đăng nhập, đặt đơn, liên hệ; đăng nhập còn có giới hạn lần thất bại theo email. Rate limit hiện lưu trong bộ nhớ một tiến trình; khi chạy nhiều replica cần shared store.
 - API nhạy cảm gửi `Cache-Control: no-store`; cookie HttpOnly/SameSite và Secure trong production; không ghi URI/mật khẩu vào log lỗi database.
 - Helmet đặt security headers. Vite dev có CSP và chặn iframe; production backend có thể phục vụ `frontend/dist` trực tiếp dưới CSP. Nếu dùng CDN/reverse proxy phục vụ HTML, cần cấu hình CSP/security headers ở lớp đó. Chỉ dev cho phép inline script để Vite chạy HMR.
 
-Tham khảo: [OWASP CSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html). Chưa triển khai MFA, xác minh email hay gửi email khôi phục mật khẩu.
+Tham khảo: [OWASP CSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html). Hệ thống có xác minh email khi đăng ký và khôi phục mật khẩu qua mã gửi email.
 
 ## Dữ liệu và transaction
 
@@ -133,14 +133,9 @@ E2E tự tạo indexes/seed trên **`nha_hoa_test`**, ưu tiên API cổng **400
 
 Runner kiểm tra đăng nhập, phân quyền, tìm hoa, giỏ hàng, COD, tra cứu, quản trị, accessibility và hai khách mua cùng một sản phẩm còn một bó. Dữ liệu có nhãn kiểm thử được dọn và hoàn lại kho sau khi chạy.
 
-## Chuyển từ MySQL
-
-Trước khi chuyển, instance cũ có 12 sản phẩm và 1 admin, không có đơn hàng hoặc lời nhắn. Catalog cùng ID, giá và tồn kho đã được nạp vào Atlas; admin dùng lại thông tin đăng nhập đã có. Người dùng cần đăng nhập lại vì phiên MySQL không được chuyển.
-
-
 ## Phạm vi triển khai
 
-Hiện hỗ trợ **COD**; chưa tích hợp cổng thanh toán online, SMTP, khôi phục mật khẩu qua email hay hãng vận chuyển. Liên hệ/đăng ký nhận tin lưu MongoDB, chưa gửi email tự động. Catalog và ảnh là dữ liệu minh họa, cần thay bằng sản phẩm cửa hàng thật.
+Hiện hỗ trợ COD, xác minh email và khôi phục mật khẩu qua email. Chưa tích hợp cổng thanh toán online hoặc hãng vận chuyển. Catalog và ảnh là dữ liệu minh họa, cần thay bằng sản phẩm cửa hàng thật.
 
 Build `frontend/dist`, cấu hình web server SPA fallback và proxy `/api` tới backend. Chạy backend bằng `npm run start -w backend`. Dùng HTTPS, `NODE_ENV=production`, `FRONTEND_ORIGIN` và `frontend/.env` với `VITE_SITE_URL` đúng tên miền; Secure cookie được bật trong production. Preview mặc định noindex. SEO/social preview từng trang đầy đủ cần prerender/SSR khi triển khai công khai.
 
