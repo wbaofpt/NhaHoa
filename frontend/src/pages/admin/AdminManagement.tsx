@@ -96,6 +96,7 @@ export default function AdminManagement() {
     try {
       await api(`/admin/customers/${customer.id}`, { method: "DELETE" });
       setCustomers((all) => all.filter((item) => item.id !== customer.id));
+      setEditingCustomer(null);
       setError("");
     } catch (e) { setError((e as Error).message); } finally { setActionId(null); }
   };
