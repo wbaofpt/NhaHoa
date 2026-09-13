@@ -21,7 +21,7 @@ import {
   type Product,
   type Order,
 } from "../../types";
-import { PageHeading } from "../../components";
+import { PageHeading, useConfirm } from "../../components";
 import { AdminNav } from "./AdminNav";
 
 const imageFile = (file: File) =>
@@ -67,6 +67,7 @@ type Inquiry = {
 };
 export default function Admin() {
   const { user, authLoading, reload } = useStore();
+  const confirm = useConfirm();
   const location = useLocation();
   const [tab, setTab] = useState(() =>
     location.pathname.split("/").pop() === "products" ||
@@ -166,7 +167,7 @@ export default function Admin() {
   const status = async (order: Order, next: string) => {
     if (
       next === "cancelled" &&
-      !window.confirm(`Hủy đơn ${order.id} và hoàn lại tồn kho?`)
+      !(await confirm(`Hủy đơn ${order.id} và hoàn lại tồn kho?`))
     )
       return;
     setBusy(true);
@@ -184,7 +185,7 @@ export default function Admin() {
     }
   };
   const removeProduct = async (product: Product) => {
-    if (!window.confirm(`Xóa sản phẩm ${product.name}?`)) return;
+    if (!(await confirm(`Xóa sản phẩm ${product.name}?`))) return;
     setBusy(true);
     try {
       await api(`/admin/products/${product.id}`, { method: "DELETE" });

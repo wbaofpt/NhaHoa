@@ -2,11 +2,11 @@ import React, { lazy, Suspense, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { StoreProvider, useStore } from "./store";
-import { Header, Footer, SupportFloat } from "./components";
+import { Header, Footer, SupportFloat, ConfirmProvider } from "./components";
 import Home from "./pages/Home";
 import { Shop, ProductDetail, Favorites } from "./pages/Shop";
 import { Cart, Checkout, Success } from "./pages/Checkout";
-import { Auth, Account, Tracking } from "./pages/Account";
+import { Auth, Account, Tracking, ForgotPassword } from "./pages/Account";
 import {
   Collections,
   About,
@@ -69,6 +69,7 @@ function NavigationEffects() {
       "/thanh-toan": "Đặt hoa",
       "/dang-nhap": "Đăng nhập",
       "/dang-ky": "Đăng ký",
+      "/quen-mat-khau": "Quên mật khẩu",
       "/tai-khoan": "Tài khoản",
       "/tai-khoan/bao-mat": "Bảo mật tài khoản",
       "/tai-khoan/thong-tin": "Thông tin cá nhân",
@@ -117,7 +118,7 @@ function NavigationEffects() {
     }
     robots.setAttribute(
       "content",
-      /gio-hang|thanh-toan|tai-khoan|quan-tri|dang-|tra-cuu|yeu-thich|thanh-cong/.test(
+      /gio-hang|thanh-toan|tai-khoan|quan-tri|dang-|quen-mat-khau|tra-cuu|yeu-thich|thanh-cong/.test(
         pathname,
       ) || !import.meta.env.VITE_SITE_URL
         ? "noindex,follow"
@@ -164,7 +165,7 @@ function NavigationEffects() {
 function App() {
   return (
     <BrowserRouter>
-      <StoreProvider>
+      <StoreProvider><ConfirmProvider>
         <NavigationEffects />
         <HomeWelcome />
         <MotionEffects />
@@ -219,6 +220,7 @@ function App() {
               />
               <Route path="/dat-hang-thanh-cong" element={<Success />} />
               <Route path="/dang-nhap" element={<Auth key="login" />} />
+              <Route path="/quen-mat-khau" element={<ForgotPassword />} />
               <Route
                 path="/dang-ky"
                 element={<Auth key="register" register />}
@@ -340,7 +342,7 @@ function App() {
         </PageMotion>
         <Footer />
         <SupportFloat />
-      </StoreProvider>
+      </ConfirmProvider></StoreProvider>
     </BrowserRouter>
   );
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { BarChart3, Boxes, Mail, RefreshCw, Users } from "lucide-react";
+import { BarChart3, Boxes, Mail, RefreshCw, Users, Trash2 } from "lucide-react";
 import { api, money, type Order, type Product, type User } from "../../types";
-import { PageHeading } from "../../components";
+import { PageHeading, useConfirm } from "../../components";
 import { AdminNav } from "./AdminNav";
 type Subscriber = { email: string; created_at: string };
 type Inquiry = { id: number; resolved?: boolean };
@@ -24,6 +24,7 @@ export default function AdminManagement() {
   const [actionId, setActionId] = useState<string | number | null>(null);
   const [stockValues, setStockValues] = useState<Record<number, string>>({});
   const [editingCustomer, setEditingCustomer] = useState<User | null>(null);
+  const confirm = useConfirm();
   const load = async () => {
     setLoading(true);
     try {
@@ -89,8 +90,17 @@ export default function AdminManagement() {
       await load();
     } catch (e) { setError((e as Error).message); } finally { setActionId(null); }
   };
+  const removeCustomer = async (customer: User) => {
+    if (customer.role === "admin" || !(await confirm(`Xóa tài khoản khách hàng ${customer.name}? Các đơn hàng cũ sẽ được giữ lại.`))) return;
+    setActionId(customer.id);
+    try {
+      await api(`/admin/customers/${customer.id}`, { method: "DELETE" });
+      setCustomers((all) => all.filter((item) => item.id !== customer.id));
+      setError("");
+    } catch (e) { setError((e as Error).message); } finally { setActionId(null); }
+  };
   const removeSubscriber = async (email: string) => {
-    if (!window.confirm("Xóa email này khỏi danh sách nhận tin?")) return;
+    if (!(await confirm("Xóa email này khỏi danh sách nhận tin?"))) return;
     setActionId(email);
     try {
       await api("/admin/subscribers", { method: "DELETE", body: JSON.stringify({ email }) });
@@ -167,9 +177,10 @@ export default function AdminManagement() {
             </>
           ) : section === "customers" ? (
             <>
-              <h2>
+              <div className="section-heading"><h2>
                 <Users /> Khách hàng ({customers.length})
-              </h2>
+              </h2></div>
+              {editingCustomer && <button className="button outline small" disabled={actionId === editingCustomer.id} onClick={() => void removeCustomer(editingCustomer)}>Xóa khách hàng</button>}
               {editingCustomer && <div className="help-panel admin-edit-panel">
                 <h3>Sửa thông tin khách hàng</h3>
                 <div className="admin-edit-grid">

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -21,6 +21,16 @@ import {
 import { useStore } from "./store";
 import { BloomLoader } from "./PageMotion";
 import { api, post, money, type Product } from "./types";
+
+type ConfirmRequest = { message: string; resolve: (value: boolean) => void };
+const ConfirmContext = createContext<(message: string) => Promise<boolean>>(() => Promise.resolve(false));
+export function useConfirm() { return useContext(ConfirmContext); }
+export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const [request, setRequest] = useState<ConfirmRequest | null>(null);
+  const confirm = (message: string) => new Promise<boolean>((resolve) => setRequest({ message, resolve }));
+  const close = (value: boolean) => { request?.resolve(value); setRequest(null); };
+  return <ConfirmContext.Provider value={confirm}>{children}{request && <div className="confirm-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) close(false); }}><section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"><Flower2 size={28} /><h2 id="confirm-title">Xác nhận</h2><p>{request.message}</p><div className="confirm-actions"><button className="button outline" onClick={() => close(false)}>Hủy</button><button className="button" autoFocus onClick={() => close(true)}>Xác nhận</button></div></section></div>}</ConfirmContext.Provider>;
+}
 
 export function SupportFloat() {
   const zalo = import.meta.env.VITE_ZALO_URL || "https://zalo.me/0900000000";

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowUpRight, Flower2, Leaf, Heart, Clock, Send } from "lucide-react";
 import { PageHeading, ButtonLink, Botanical, Empty } from "../components";
@@ -180,10 +180,13 @@ export function About() {
 }
 export function Blog() {
   const [params, setParams] = useSearchParams();
+  const [remoteArticles, setRemoteArticles] = useState<typeof articles>([]);
+  useEffect(() => { void api<typeof articles>("/articles").then(setRemoteArticles).catch(() => setRemoteArticles([])); }, []);
   const query = params.get("q") || "";
   const category = params.get("chu-de") || "";
   const customArticles = (() => { try { return JSON.parse(localStorage.getItem("nha-hoa-articles") || "[]"); } catch { return []; } })();
-  const allArticles = [...customArticles, ...articles.filter((article) => !customArticles.some((item: { slug: string }) => item.slug === article.slug))];
+  const managedArticles = remoteArticles.length ? remoteArticles : articles;
+  const allArticles = [...customArticles, ...managedArticles.filter((article) => !customArticles.some((item: { slug: string }) => item.slug === article.slug))];
   const normalize = (text: string) =>
     text
       .toLocaleLowerCase("vi")
@@ -265,7 +268,9 @@ export function Blog() {
 }
 export function Article() {
   const { slug } = useParams();
-  const a = articles.find((a) => a.slug === slug);
+  const fallback = articles.find((a) => a.slug === slug);
+  const [a, setArticle] = useState<typeof fallback>(fallback);
+  useEffect(() => { if (slug) void api<typeof fallback>(`/articles/${slug}`).then(setArticle).catch(() => setArticle(fallback)); }, [slug]);
   if (!a)
     return (
       <Empty
@@ -277,29 +282,14 @@ export function Article() {
     );
   return (
     <>
-      <PageHeading eyebrow={a.category} title={a.title} description={a.intro} />
+      <section className="article-hero wrap">
+        <img className="article-hero-image" src={a.image.startsWith("data:") ? a.image : "/images/" + a.image + ".jpg"} alt={a.title} />
+        <div className="article-hero-copy"><span className="eyebrow">{a.category}</span><h1>{a.title}</h1><p>{a.intro}</p><p className="muted">Biên soạn bởi Nhà Hoa · <Clock size={14} /> 3 phút đọc</p></div>
+      </section>
       <article className="article-body wrap section-bottom">
-        <img
-          className="article-cover"
-          src={"/images/" + a.image + ".jpg"}
-          alt={a.title}
-        />
-        <p className="muted">
-          Biên soạn bởi Nhà Hoa · <Clock size={14} /> 3 phút đọc
-        </p>
-        {a.sections.map(([title, body]) => (
-          <section key={title}>
-            <h2>{title}</h2>
-            <p>{body}</p>
-          </section>
-        ))}
-        <div className="article-end">
-          <Flower2 />
-          <p>Cảm ơn bạn đã dừng lại một chút cùng Nhà Hoa.</p>
-          <Link className="text-link" to="/cham-soc-hoa">
-            Mở cẩm nang chăm hoa
-          </Link>
-          <ButtonLink to="/hoa">Mang chút hoa về nhà</ButtonLink>
+        <div className="article-reading">
+          {a.sections.map(([title, body]) => <section key={title}><h2>{title}</h2><p>{body}</p></section>)}
+          <div className="article-end"><Flower2 /><p>Cảm ơn bạn đã dừng lại một chút cùng Nhà Hoa.</p><Link className="text-link" to="/cham-soc-hoa">Mở cẩm nang chăm hoa</Link><ButtonLink to="/hoa">Mang chút hoa về nhà</ButtonLink></div>
         </div>
       </article>
       <section className="wrap section-bottom">

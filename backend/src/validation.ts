@@ -16,7 +16,7 @@ export const credentials = z.object({
 });
 export const newPassword = z
   .string()
-  .min(15, "Mật khẩu cần ít nhất 15 ký tự.")
+  .min(8, "Mật khẩu cần ít nhất 8 ký tự.")
   .max(72)
   .refine(
     (v) => Buffer.byteLength(v, "utf8") <= 72,
@@ -31,12 +31,21 @@ export const loginCredentials = z.preprocess((value) => {
   if (!value || typeof value !== "object") return value;
   const input = value as Record<string, unknown>;
   return { ...input, identifier: input.identifier ?? input.email };
-}, z.object({ identifier: loginIdentifier, password: credentials.shape.password }));
+}, z.object({ identifier: loginIdentifier, password: credentials.shape.password, notRobot: z.literal(true, { error: "Vui lòng xác nhận bạn không phải robot." }) }));
+export const passwordResetRequest = z.object({ email });
+export const passwordReset = z.object({ email, code: z.string().regex(/^\d{6}$/), newPassword, confirmPassword: z.string(), }).superRefine((value, ctx) => {
+  if (value.newPassword !== value.confirmPassword)
+    ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: "Mật khẩu xác nhận chưa khớp." });
+});
 export const registration = credentials.extend({
   name: z.string().trim().min(2).max(100),
   password: newPassword,
-  phone: registrationPhone,
-  phoneCode: z.string().regex(/^\d{6}$/, "Nhập mã xác minh SMS gồm 6 số."),
+  confirmPassword: z.string().min(1),
+  emailCode: z.string().regex(/^\d{6}$/, "Nhập mã xác nhận email gồm 6 số."),
+  notRobot: z.literal(true, { error: "Vui lòng xác nhận bạn không phải robot." }),
+}).superRefine((value, ctx) => {
+  if (value.password !== value.confirmPassword)
+    ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: "Mật khẩu xác nhận chưa khớp." });
 });
 export const productInput = z.object({
   name: z.string().trim().min(2).max(150),

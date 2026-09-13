@@ -27,23 +27,23 @@ export function Auth({ register = false }: { register?: boolean }) {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [show, setShow] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [notRobot, setNotRobot] = useState(false);
   const [phone, setPhone] = useState("");
   const [phoneCode, setPhoneCode] = useState("");
   const [phoneCodeSent, setPhoneCodeSent] = useState(false);
   const [sendingPhoneCode, setSendingPhoneCode] = useState(false);
   const [phoneError, setPhoneError] = useState("");
   const [smsCooldown, setSmsCooldown] = useState(0);
-  useEffect(() => {
-    if (!smsCooldown) return;
-    const timer = window.setTimeout(() => setSmsCooldown(smsCooldown - 1), 1000);
-    return () => window.clearTimeout(timer);
-  }, [smsCooldown]);
-  const sendPhoneCode = async () => {
+  const sendPhoneCode = async () => undefined;
+  /* SMS verification is intentionally not part of registration. */
+  /*
     if (!/^(?:0|\+84)[35789][0-9]{8}$/.test(phone.replace(/[\s()-]/g, ""))) {
       setPhoneError("Nhập số di động Việt Nam hợp lệ, ví dụ 0901234567.");
       return;
@@ -60,7 +60,7 @@ export function Auth({ register = false }: { register?: boolean }) {
     } finally {
       setSendingPhoneCode(false);
     }
-  };
+  */
   const sendCode = async () => {
     if (!form.email) return setError("Vui lòng nhập email trước.");
     setSendingCode(true);
@@ -73,7 +73,8 @@ export function Auth({ register = false }: { register?: boolean }) {
   }, [user, authLoading, destination, navigate]);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (register && (!phoneCodeSent || !/^\d{6}$/.test(phoneCode))) {
+    /* SMS verification is not required for registration. */
+    if (false && register && (!phoneCodeSent || !/^\d{6}$/.test(phoneCode))) {
       setPhoneError("Vui lòng gửi và nhập mã SMS gồm 6 số trước khi tạo tài khoản.");
       return;
     }
@@ -82,7 +83,7 @@ export function Auth({ register = false }: { register?: boolean }) {
     try {
       const result = await api<User>(
         "/auth/" + (register ? "register" : "login"),
-        post(register ? { ...form, phone, phoneCode } : { identifier: form.email, password: form.password }),
+        post(register ? { ...form, confirmPassword, emailCode: verificationCode, notRobot } : { identifier: form.email, password: form.password, notRobot }),
       );
       setUser(result);
       navigate(destination);
@@ -148,12 +149,12 @@ export function Auth({ register = false }: { register?: boolean }) {
           <div className="field">
             <label htmlFor="auth-identifier">{register ? "Email" : "Email hoặc số điện thoại"}</label>
             <div className="verification-input">
-              <input id="auth-identifier" type={register ? "email" : "text"} required autoComplete={register ? "email" : "username"} autoCapitalize="none" spellCheck={false} maxLength={190} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <input id="auth-identifier" type={register ? "email" : "text"} required autoComplete={register ? "email" : "username"} autoCapitalize="none" spellCheck={false} maxLength={190} value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); if (register) { setCodeSent(false); setVerificationCode(""); } }} />
               {register && <button type="button" className="button outline small" onClick={() => void sendCode()} disabled={sendingCode}>{sendingCode ? "Đang gửi…" : codeSent ? "Gửi lại mã" : "Gửi mã"}</button>}
             </div>
           </div>
           {register && codeSent && <label className="field">Mã xác nhận email<input inputMode="numeric" maxLength={6} value={verificationCode} onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="Nhập mã 6 số" /></label>}
-          {register && (
+          {false && register && (
             <>
               <div className="field">
                 <label htmlFor="registration-phone">Số điện thoại</label>
@@ -218,11 +219,12 @@ export function Auth({ register = false }: { register?: boolean }) {
                   register ? "registration-password-help" : undefined
                 }
                 required
-                minLength={register ? 15 : 8}
+                minLength={8}
                 maxLength={72}
                 autoComplete={register ? "new-password" : "current-password"}
                 value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                onChange={(e) => { e.currentTarget.setCustomValidity(""); setForm({ ...form, password: e.target.value }); }}
+                onInvalid={(e) => e.currentTarget.setCustomValidity("Mật khẩu phải có ít nhất 8 ký tự.")}
               />
               <button
                 type="button"
@@ -235,11 +237,13 @@ export function Auth({ register = false }: { register?: boolean }) {
             </span>
             {register && (
               <small id="registration-password-help">
-                Ít nhất 15 ký tự, tối đa 72 byte UTF-8. Có thể dùng cụm từ dễ
+                Ít nhất 8 ký tự, tối đa 72 byte UTF-8. Có thể dùng cụm từ dễ
                 nhớ.
               </small>
             )}
           </label>
+          {register && <label className="field">Xác nhận mật khẩu<span className="password-input"><input type={showConfirm ? "text" : "password"} required autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /><button type="button" className="icon-button" aria-label={showConfirm ? "Ẩn xác nhận mật khẩu" : "Hiện xác nhận mật khẩu"} onClick={() => setShowConfirm(!showConfirm)}>{showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}</button></span></label>}
+          <label className="robot-check"><input type="checkbox" required checked={notRobot} onChange={(e) => setNotRobot(e.target.checked)} /> Tôi không phải robot</label>
           {error && (
             <p className="form-error" role="alert">
               {error}
@@ -249,6 +253,7 @@ export function Auth({ register = false }: { register?: boolean }) {
             {busy ? "Đang xử lý…" : register ? "Tạo tài khoản" : "Đăng nhập"}
             <ArrowUpRight size={18} />
           </button>
+          {!register && <p><Link className="inline-link" to="/quen-mat-khau">Quên mật khẩu?</Link></p>}
         </form>
         <p>
           {register ? "Đã là người nhà? " : "Bạn chưa có tài khoản? "}
@@ -266,6 +271,29 @@ export function Auth({ register = false }: { register?: boolean }) {
       </div>
     </section>
   );
+}
+export function ForgotPassword() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [sent, setSent] = useState(false);
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const send = async () => {
+    setBusy(true); setError("");
+    try { await api("/auth/forgot-password/request", post({ email })); setSent(true); setMessage("Nếu email tồn tại, mã xác nhận đã được gửi."); }
+    catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+  const reset = async (event: FormEvent) => {
+    event.preventDefault(); setBusy(true); setError("");
+    try { await api("/auth/forgot-password/reset", post({ email, code, newPassword: password, confirmPassword: confirm })); setMessage("Mật khẩu đã thay đổi. Hãy đăng nhập bằng mật khẩu mới."); setTimeout(() => navigate("/dang-nhap"), 1200); }
+    catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+  return <section className="auth-layout"><div className="auth-visual"><img src="/images/pink.jpg" alt="Những cánh hoa hồng mềm mại" /></div><div className="auth-form"><Flower2 size={36} strokeWidth={1} /><span className="eyebrow">KHÔI PHỤC GÓC RIÊNG</span><h1>Đặt lại mật khẩu.</h1><p>Nhập email để nhận mã xác nhận và tạo mật khẩu mới cho tài khoản Nhà Hoa.</p><form onSubmit={reset}><label className="field">Email<div className="verification-input"><input type="email" required autoComplete="email" value={email} onChange={(e) => { setEmail(e.target.value); setSent(false); }} /><button type="button" className="button outline small" onClick={() => void send()} disabled={busy || !email}>{sent ? "Gửi lại mã" : "Gửi mã"}</button></div></label>{sent && <><label className="field">Mã xác nhận email<input inputMode="numeric" autoComplete="one-time-code" required maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} /></label><label className="field">Mật khẩu mới<span className="password-input"><input type={show ? "text" : "password"} required minLength={8} maxLength={72} value={password} onChange={(e) => { e.currentTarget.setCustomValidity(""); setPassword(e.target.value); }} onInvalid={(e) => e.currentTarget.setCustomValidity("Mật khẩu phải có ít nhất 8 ký tự.")} /><button type="button" className="icon-button" aria-label={show ? "Ẩn mật khẩu mới" : "Hiện mật khẩu mới"} onClick={() => setShow(!show)}>{show ? <EyeOff size={18} /> : <Eye size={18} />}</button></span></label><label className="field">Xác nhận mật khẩu mới<input type={show ? "text" : "password"} required value={confirm} onChange={(e) => { e.currentTarget.setCustomValidity(""); setConfirm(e.target.value); }} onInvalid={(e) => e.currentTarget.setCustomValidity("Vui lòng nhập lại mật khẩu.")} /></label><button className="button" disabled={busy}>Đặt lại mật khẩu <ArrowUpRight size={18} /></button></>}{message && <p className="form-success" role="status">{message}</p>}{error && <p className="form-error" role="alert">{error}</p>}</form><p><Link className="inline-link" to="/dang-nhap">Quay lại đăng nhập</Link></p></div></section>;
 }
 export function Account() {
   const { user, setUser, authLoading } = useStore();

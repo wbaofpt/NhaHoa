@@ -21,6 +21,7 @@ import {
   inquiries,
   subscribers,
   favorites,
+  articles,
   nextId,
   transaction,
   publicFields,
@@ -40,11 +41,14 @@ import {
   transitions,
   newPassword,
   registrationPhone,
+  passwordResetRequest,
+  passwordReset,
 } from "./validation.js";
 import { consumePhoneCode, requestPhoneCode, PhoneVerificationError, type PhoneCode } from "./phone-verification.js";
 const phoneCodes = db.collection<PhoneCode>("phone_verification_codes");
-import { code as createVerificationCode, digest as digestVerificationCode, sendEmailCode } from "./verification.js";
+import { code as createVerificationCode, digest as digestVerificationCode, sendEmailCode, sendPasswordChangedEmail } from "./verification.js";
 const emailCodes = new Map<string, { hash: string; expires: number; sentAt: number }>();
+const passwordResetCodes = new Map<string, { hash: string; expires: number; sentAt: number }>();
 const app = express();
 // The app is deployed behind one reverse proxy (for example Vite, nginx, or a
 // platform edge). Trust that single hop so express-rate-limit can safely use
@@ -209,6 +213,11 @@ app.get("/api/products/:slug", async (req, res) => {
     ? res.json(product)
     : res.status(404).json({ error: "Không tìm thấy mẫu hoa." });
 });
+app.get("/api/articles", async (_req, res) => res.json(await articles.find({}, { projection: { _id: 0 } }).sort({ updated_at: -1 }).toArray()));
+app.get("/api/articles/:slug", async (req, res) => {
+  const article = await articles.findOne({ slug: String(req.params.slug) }, { projection: { _id: 0 } });
+  article ? res.json(article) : res.status(404).json({ error: "Không tìm thấy bài viết." });
+});
 app.post("/api/auth/send-email-code", authLimiter, async (req, res) => {
   const address = email.parse(req.body?.email);
   const previous = emailCodes.get(address);
@@ -218,6 +227,34 @@ app.post("/api/auth/send-email-code", authLimiter, async (req, res) => {
   emailCodes.set(address, { hash: digestVerificationCode(value), expires: Date.now() + 600000, sentAt: Date.now() });
   res.json({ ok: true });
 });
+app.post("/api/auth/forgot-password/request", authLimiter, async (req, res) => {
+  const { email: address } = passwordResetRequest.parse(req.body);
+  const previous = passwordResetCodes.get(address);
+  if (!previous || Date.now() - previous.sentAt >= 60000) {
+    const value = createVerificationCode();
+    const exists = await users.findOne({ email: address }, { projection: { _id: 1 } });
+    if (exists) await sendEmailCode(address, value);
+    passwordResetCodes.set(address, { hash: digestVerificationCode(value), expires: Date.now() + 600000, sentAt: Date.now() });
+  }
+  res.json({ ok: true, message: "Nếu email tồn tại, mã xác nhận đã được gửi." });
+});
+app.post("/api/auth/forgot-password/reset", authLimiter, async (req, res) => {
+  const input = passwordReset.parse(req.body);
+  const record = passwordResetCodes.get(input.email);
+  if (!record || record.expires < Date.now() || record.hash !== digestVerificationCode(input.code))
+    throw new Conflict("Mã xác nhận không đúng hoặc đã hết hạn.");
+  const user = await users.findOne({ email: input.email });
+  if (!user) throw new Conflict("Mã xác nhận không đúng hoặc đã hết hạn.");
+  const password_hash = await bcrypt.hash(input.newPassword, 12);
+  await transaction(async (session) => {
+    await users.updateOne({ id: user.id }, { $set: { password_hash }, $inc: { session_version: 1 } }, { session });
+    await sessions.deleteMany({ user_id: user.id }, { session });
+  });
+  passwordResetCodes.delete(input.email);
+  try { await sendPasswordChangedEmail(input.email); } catch (error) { console.error("Password change notification failed", safeDatabaseError(error)); }
+  res.clearCookie("session", { path: "/" });
+  res.json({ ok: true });
+});
 app.post("/api/auth/send-phone-code", authLimiter, async (req, res) => {
   const phone = registrationPhone.parse(req.body?.phone);
   await requestPhoneCode(phoneCodes, phone);
@@ -225,14 +262,16 @@ app.post("/api/auth/send-phone-code", authLimiter, async (req, res) => {
 });
 app.post("/api/auth/register", authLimiter, async (req, res) => {
   const input = registration.parse(req.body);
+  const emailRecord = emailCodes.get(input.email);
+  if (!emailRecord || emailRecord.expires < Date.now() || emailRecord.hash !== digestVerificationCode(input.emailCode))
+    throw new Conflict("Mã xác nhận email không đúng hoặc đã hết hạn.");
+  emailCodes.delete(input.email);
   if (await users.findOne({ email: input.email }))
     throw new Conflict("Email đã tồn tại.");
-  await consumePhoneCode(phoneCodes, input.phone, input.phoneCode);
   const user: User = {
     id: await nextId("users"),
     name: input.name,
     email: input.email,
-    phone: input.phone,
     password_hash: await bcrypt.hash(input.password, 12),
     role: "customer",
     created_at: new Date(),
@@ -478,6 +517,14 @@ app.post("/api/subscribe", messageLimiter, async (req, res) => {
   res.json({ ok: true });
 });
 app.use("/api/admin", required, admin);
+app.put("/api/admin/articles/:slug", async (req, res) => {
+  const input = z.object({ title: z.string().trim().min(2).max(180), category: z.string().trim().min(2).max(80), intro: z.string().trim().max(1000), image: z.string().max(2500000), sections: z.array(z.tuple([z.string().min(2), z.string().min(5)] as const)).max(20) }).strict().parse(req.body);
+  const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).parse(req.params.slug);
+  await articles.updateOne({ slug }, { $set: { ...input, slug, updated_at: new Date() } }, { upsert: true });
+  res.json({ ok: true });
+});
+app.delete("/api/admin/articles/:slug", async (req, res) => { await articles.deleteOne({ slug: req.params.slug }); res.json({ ok: true }); });
+app.get("/api/admin/articles", async (_req, res) => res.json(await articles.find({}, { projection: { _id: 0 } }).sort({ updated_at: -1 }).toArray()));
 app.get("/api/admin/customers", async (_req, res) => {
   res.json(
     await users
@@ -525,6 +572,18 @@ app.get("/api/admin/subscribers", async (_req, res) => {
   res.json(
     await subscribers.find({}, publicFields).sort({ created_at: -1 }).toArray(),
   );
+});
+app.delete("/api/admin/customers/:id", async (req, res) => {
+  const id = z.coerce.number().int().positive().parse(req.params.id);
+  const target = await users.findOne({ id }, { projection: { role: 1 } });
+  if (!target) return res.status(404).json({ error: "Không tìm thấy khách hàng." });
+  if (target.role === "admin") return res.status(403).json({ error: "Không thể xóa tài khoản quản trị viên." });
+  await transaction(async (session) => {
+    await users.deleteOne({ id }, { session });
+    await sessions.deleteMany({ user_id: id }, { session });
+    await favorites.deleteMany({ user_id: id }, { session });
+  });
+  res.json({ ok: true });
 });
 app.delete("/api/admin/subscribers", async (req, res) => {
   const input = z.object({ email }).strict().parse(req.body);
@@ -664,6 +723,8 @@ app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     });
   if (error instanceof Conflict)
     return res.status(409).json({ error: error.message });
+  if ((error as { code?: number }).code === 11000 && (error as { keyPattern?: Record<string, unknown> }).keyPattern?.email)
+    return res.status(409).json({ error: "Email đã được sử dụng." });
   if ((error as { code?: number }).code === 11000)
     return res
       .status(409)

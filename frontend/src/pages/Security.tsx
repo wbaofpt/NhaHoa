@@ -59,7 +59,7 @@ export default function Security() {
       setBusy(false);
     }
   };
-  const longEnough = form.newPassword.length >= 15;
+  const longEnough = form.newPassword.length >= 8;
   const withinLimit = new TextEncoder().encode(form.newPassword).length <= 72;
   return (
     <>
@@ -74,8 +74,8 @@ export default function Security() {
           <h2>Đổi mật khẩu</h2>
           {[
             { key: "currentPassword", label: "Mật khẩu hiện tại", min: 8 },
-            { key: "newPassword", label: "Mật khẩu mới", min: 15 },
-            { key: "confirm", label: "Nhập lại mật khẩu mới", min: 15 },
+            { key: "newPassword", label: "Mật khẩu mới", min: 8 },
+            { key: "confirm", label: "Nhập lại mật khẩu mới", min: 8 },
           ].map((f) => (
             <label className="field" key={f.key}>
               {f.label}
@@ -90,7 +90,8 @@ export default function Security() {
                     : "new-password"
                 }
                 value={form[f.key as keyof typeof form]}
-                onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                onChange={(e) => { e.currentTarget.setCustomValidity(""); setForm({ ...form, [f.key]: e.target.value }); }}
+                onInvalid={(e) => e.currentTarget.setCustomValidity(`${f.label} phải có ít nhất ${f.min} ký tự.`)}
                 aria-describedby={
                   f.key === "currentPassword" ? undefined : "password-help"
                 }
@@ -99,7 +100,7 @@ export default function Security() {
           ))}
           <p id="password-help" className="password-help">
             <Check size={15} className={longEnough ? "met" : ""} />
-            Ít nhất 15 ký tự; tối đa 72 byte UTF-8. Bạn có thể dùng một cụm từ
+            Ít nhất 8 ký tự; tối đa 72 byte UTF-8. Bạn có thể dùng một cụm từ
             dễ nhớ.
           </p>
           {form.newPassword && !withinLimit && (

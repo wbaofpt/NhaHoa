@@ -60,7 +60,6 @@ database/
   seed.json           Catalog mẫu MongoDB
   prepare_catalog.py  Tải ảnh và tạo seed JSON
   configure-atlas.cjs Công cụ nhập cấu hình từ file credentials local
-  legacy-mysql/      Tài liệu/script MySQL cũ, chỉ giữ làm tham chiếu
 tests/
   run-e2e.mjs         Khởi chạy môi trường MongoDB test riêng
 ```
@@ -138,7 +137,6 @@ Runner kiểm tra đăng nhập, phân quyền, tìm hoa, giỏ hàng, COD, tra 
 
 Trước khi chuyển, instance cũ có 12 sản phẩm và 1 admin, không có đơn hàng hoặc lời nhắn. Catalog cùng ID, giá và tồn kho đã được nạp vào Atlas; admin dùng lại thông tin đăng nhập đã có. Người dùng cần đăng nhập lại vì phiên MySQL không được chuyển.
 
-Bản sao chỉ lưu local: `.local/mysql-export.json` và `.local/backend-mysql.env`. Dữ liệu MySQL cũ ở `.local/mysql-data` được giữ nguyên. Các file SQL và công cụ cũ nằm trong `database/legacy-mysql/`, không thuộc luồng chạy hoặc kiểm thử hiện tại. Dependency `mysql2` đã được gỡ.
 
 ## Phạm vi triển khai
 

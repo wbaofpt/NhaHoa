@@ -8,8 +8,9 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { api, statuses, type Order, type Product } from "../../types";
-import { PageHeading } from "../../components";
+import { PageHeading, useConfirm } from "../../components";
 export default function AdminExtra() {
+  const confirm = useConfirm();
   const page = useLocation().pathname.split("/").pop();
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -19,7 +20,7 @@ export default function AdminExtra() {
   });  const [saved, setSaved] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const removeOrder = async (id: string) => {
-    if (!window.confirm(`Xóa đơn ${id} khỏi lịch sử?`)) return;
+    if (!(await confirm(`Xóa đơn ${id} khỏi lịch sử?`))) return;
     setDeleting(id);
     try { await api(`/admin/orders/${id}`, { method: "DELETE" }); setOrders((all) => all.filter((order) => order.id !== id)); }
     catch (e) { setError((e as Error).message); }

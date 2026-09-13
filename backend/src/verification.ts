@@ -21,6 +21,20 @@ export async function sendEmailCode(to: string, value: string) {
   const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ from, to, subject: "Mã xác nhận · Nhà Hoa", html: emailTemplate(value) }) });
   if (!response.ok) throw new Error("Không thể gửi email xác nhận.");
 }
+export async function sendPasswordChangedEmail(to: string) {
+  const html = `<!doctype html><html><body style="margin:0;background:#fbf9f5;color:#30392f;font-family:Arial,sans-serif"><div style="max-width:560px;margin:32px auto;padding:36px 28px;background:#fff;border:1px solid #e2e2d8"><div style="text-align:center;color:#354d3c;font-family:Georgia,serif;font-size:34px">nhà hoa</div><div style="height:1px;background:#e2e2d8;margin:24px 0"></div><p style="font-size:12px;letter-spacing:2px;color:#9c584e;text-align:center;text-transform:uppercase">Bảo mật tài khoản</p><h1 style="font:28px Georgia,serif;text-align:center;font-weight:400">Mật khẩu đã được thay đổi.</h1><p style="font-size:15px;line-height:1.7;text-align:center;color:#626957">Mật khẩu tài khoản Nhà Hoa của bạn vừa được cập nhật thành công. Nếu bạn không thực hiện thay đổi này, hãy liên hệ Nhà Hoa ngay.</p><div style="height:1px;background:#e2e2d8;margin:28px 0"></div><p style="font:italic 14px Georgia,serif;text-align:center;color:#9c584e">From our garden, with love.</p></div></body></html>`;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPassword = process.env.SMTP_PASSWORD;
+  if (smtpUser && smtpPassword) {
+    const transporter = nodemailer.createTransport({ host: process.env.SMTP_HOST || "smtp.gmail.com", port: Number(process.env.SMTP_PORT || 465), secure: true, auth: { user: smtpUser, pass: smtpPassword } });
+    await transporter.sendMail({ from: process.env.MAIL_FROM || smtpUser, to, subject: "Mật khẩu đã được thay đổi · Nhà Hoa", html });
+    return;
+  }
+  const key = process.env.RESEND_API_KEY; const from = process.env.MAIL_FROM;
+  if (!key || !from) throw new Error("Thiếu cấu hình dịch vụ email.");
+  const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ from, to, subject: "Mật khẩu đã được thay đổi · Nhà Hoa", html }) });
+  if (!response.ok) throw new Error("Không thể gửi email thông báo.");
+}
 export async function sendSmsCode(to: string, value: string) {
   const sid = process.env.TWILIO_ACCOUNT_SID; const token = process.env.TWILIO_AUTH_TOKEN; const from = process.env.TWILIO_FROM_NUMBER;
   if (!sid || !token || !from) throw new Error("Thiếu cấu hình Twilio (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER).");
