@@ -32,7 +32,7 @@ export const productInput = z.object({
     .string()
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
     .max(150),
-  category: z.enum(["Bó hoa", "Giỏ hoa", "Bình hoa", "Hoa cưới"]),
+  category: z.string().trim().min(2).max(80),
   occasion: z.enum([
     "Sinh nhật",
     "Tình yêu",
@@ -44,10 +44,13 @@ export const productInput = z.object({
   old_price: z.number().int().positive().nullable().default(null),
   image: z
     .string()
-    .max(500)
+    .max(2500000)
     .refine(
-      (v) => /^\/images\/[a-zA-Z0-9._-]+$/.test(v) || /^https:\/\//.test(v),
-      "Ảnh phải là đường dẫn /images/ hoặc HTTPS",
+      (v) =>
+        /^\/images\/[a-zA-Z0-9._-]+$/.test(v) ||
+        /^https:\/\//.test(v) ||
+        /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(v),
+      "Ảnh phải là đường dẫn /images/, HTTPS hoặc JPEG/PNG/WebP tải lên",
     ),
   description: z.string().trim().min(10).max(5000),
   flowers: z.string().min(2).max(255),

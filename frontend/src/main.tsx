@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { StoreProvider, useStore } from "./store";
-import { Header, Footer } from "./components";
+import { Header, Footer, SupportFloat } from "./components";
 import Home from "./pages/Home";
 import { Shop, ProductDetail, Favorites } from "./pages/Shop";
 import { Cart, Checkout, Success } from "./pages/Checkout";
@@ -21,8 +21,12 @@ import "./styles.css";
 import { AuthGate } from "./AuthGate";
 import { MotionEffects } from "./MotionEffects";
 import Security from "./pages/Security";
-import { PageMotion, BloomLoader } from "./PageMotion";
+import { PageMotion, BloomLoader, HomeWelcome } from "./PageMotion";
 import { Profile, OrderDetail } from "./pages/Member";
+import AdminManagement from "./pages/admin/AdminManagement";
+import AdminExtra from "./pages/admin/AdminExtra";
+import AdminAccess from "./pages/admin/AdminAccess";
+import AdminCategories from "./pages/admin/AdminCategories";
 import {
   Services,
   ServiceDetail,
@@ -33,11 +37,12 @@ import {
   NotFound,
 } from "./pages/Explore";
 import { collections, services } from "./editorial";
-const Admin = lazy(() => import("./pages/Admin"));
+const Admin = lazy(() => import("./pages/admin/Admin"));
 function NavigationEffects() {
   const { pathname } = useLocation();
   const { products } = useStore();
   useEffect(() => {
+    if (pathname.startsWith("/quan-tri")) return;
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [pathname]);
   useEffect(() => {
@@ -159,6 +164,7 @@ function App() {
     <BrowserRouter>
       <StoreProvider>
         <NavigationEffects />
+        <HomeWelcome />
         <MotionEffects />
         <a className="skip-link" href="#main">
           Đến nội dung chính
@@ -233,6 +239,74 @@ function App() {
                 }
               />
               <Route path="/quan-tri" element={<Admin />} />
+              <Route path="/quan-tri/products" element={<Admin />} />
+              <Route path="/quan-tri/orders" element={<Admin />} />
+              <Route path="/quan-tri/inquiries" element={<Admin />} />
+              <Route
+                path="/quan-tri/inventory"
+                element={
+                  <AdminAccess>
+                    <AdminManagement />
+                  </AdminAccess>
+                }
+              />
+              <Route path="/quan-tri/categories" element={<AdminAccess><AdminCategories /></AdminAccess>} />
+              <Route
+                path="/quan-tri/customers"
+                element={
+                  <AdminAccess>
+                    <AdminManagement />
+                  </AdminAccess>
+                }
+              />
+              <Route
+                path="/quan-tri/subscribers"
+                element={
+                  <AdminAccess>
+                    <AdminManagement />
+                  </AdminAccess>
+                }
+              />
+              <Route
+                path="/quan-tri/reports"
+                element={
+                  <AdminAccess>
+                    <AdminManagement />
+                  </AdminAccess>
+                }
+              />
+              <Route
+                path="/quan-tri/order-calendar"
+                element={
+                  <AdminAccess>
+                    <AdminExtra />
+                  </AdminAccess>
+                }
+              />
+              <Route
+                path="/quan-tri/alerts"
+                element={
+                  <AdminAccess>
+                    <AdminExtra />
+                  </AdminAccess>
+                }
+              />
+              <Route
+                path="/quan-tri/activity"
+                element={
+                  <AdminAccess>
+                    <AdminExtra />
+                  </AdminAccess>
+                }
+              />
+              <Route
+                path="/quan-tri/settings"
+                element={
+                  <AdminAccess>
+                    <AdminExtra />
+                  </AdminAccess>
+                }
+              />
               <Route
                 path="/tai-khoan/thong-tin"
                 element={
@@ -254,6 +328,7 @@ function App() {
           </Suspense>
         </PageMotion>
         <Footer />
+        <SupportFloat />
       </StoreProvider>
     </BrowserRouter>
   );

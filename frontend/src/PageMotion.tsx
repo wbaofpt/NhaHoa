@@ -1,11 +1,48 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
+import { useStore } from "./store";
+
+/** Only the first document entry in this tab can show the home welcome. */
+export function HomeWelcome() {
+  const { pathname } = useLocation();
+  const { loading } = useStore();
+  const [eligible] = useState(() => {
+    try {
+      return (
+        pathname === "/" && sessionStorage.getItem("nh-welcome-seen") !== "1"
+      );
+    } catch {
+      return pathname === "/";
+    }
+  });
+  const [finished, setFinished] = useState(false);
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("nh-welcome-seen", "1");
+    } catch {
+      /* Storage may be disabled. */
+    }
+  }, []);
+  useEffect(() => {
+    if (!loading || pathname !== "/") setFinished(true);
+  }, [loading, pathname]);
+  return eligible && !finished && loading && pathname === "/" ? (
+    <BloomLoader fullscreen label="Chào bạn đến với Nhà Hoa…" />
+  ) : null;
+}
 
 /** Animate the committed page without delaying navigation or remounting forms. */
 export function PageMotion({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const main = useRef<HTMLElement>(null);
-  const flourish = useRef<HTMLDivElement>(null);
+
   const previousPath = useRef(pathname);
   useLayoutEffect(() => {
     const element = main.current;
@@ -17,23 +54,13 @@ export function PageMotion({ children }: { children: ReactNode }) {
       animations.push(
         element.animate(
           [
-            { opacity: 0, transform: "translateY(12px)" },
+            { opacity: 0, transform: "translateY(18px)" },
+            { opacity: 0.2, transform: "translateY(12px)", offset: 0.25 },
             { opacity: 1, transform: "translateY(0)" },
           ],
-          { duration: 420, easing: "cubic-bezier(.22,1,.36,1)" },
+          { duration: 950, easing: "cubic-bezier(.22,1,.36,1)" },
         ),
       );
-      if (flourish.current)
-        animations.push(
-          flourish.current.animate(
-            [
-              { opacity: 0, transform: "scaleX(.04)" },
-              { opacity: 0.8, transform: "scaleX(.55)", offset: 0.4 },
-              { opacity: 0, transform: "scaleX(1)" },
-            ],
-            { duration: 650, easing: "ease-out" },
-          ),
-        );
     }
     // Keep autofocus inside the new page; otherwise give keyboard users a fresh starting point.
     if (
@@ -51,7 +78,6 @@ export function PageMotion({ children }: { children: ReactNode }) {
   }, [pathname]);
   return (
     <>
-      <div ref={flourish} className="route-flourish" aria-hidden="true" />
       <main id="main" ref={main} tabIndex={-1} className="route-stage">
         {children}
       </main>
@@ -59,28 +85,64 @@ export function PageMotion({ children }: { children: ReactNode }) {
   );
 }
 
+function BloomArtwork() {
+  return (
+    <div className="bloom-loader-art" aria-hidden="true">
+      <span className="bloom-orbit" />
+      <span className="bloom-orbit bloom-orbit-inner" />
+      <img src="/logo-mark.svg" width="52" height="52" alt="" />
+      <span className="bloom-dot" />
+    </div>
+  );
+}
+
+let pendingLoaders = 0;
+let previousInert = false;
+let previousOverflow = "";
 export function BloomLoader({
   label = "Nhà đang chuẩn bị những điều đẹp đẽ…",
+  fullscreen = false,
 }: {
   label?: string;
+  fullscreen?: boolean;
 }) {
-  return (
-    <div className="bloom-loader" role="status" aria-live="polite">
-      <div className="bloom-loader-art" aria-hidden="true">
-        <span className="bloom-orbit" />
-        <span className="bloom-orbit bloom-orbit-inner" />
-        <img src="/logo-mark.svg" width="52" height="52" alt="" />
-        <span className="bloom-dot" />
+  useLayoutEffect(() => {
+    if (!fullscreen) return;
+    const root = document.getElementById("root");
+    if (pendingLoaders++ === 0) {
+      previousInert = root?.inert || false;
+      previousOverflow = document.body.style.overflow;
+      if (root) root.inert = true;
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      if (--pendingLoaders === 0) {
+        if (root) root.inert = previousInert;
+        document.body.style.overflow = previousOverflow;
+      }
+    };
+  }, [fullscreen]);
+  if (!fullscreen)
+    return (
+      <p className="loading-message" role="status">
+        {label}
+      </p>
+    );
+  return createPortal(
+    <div className="bloom-screen">
+      <div className="bloom-loader" role="status" aria-live="polite">
+        <BloomArtwork />
+        <span className="bloom-loader-name" aria-hidden="true">
+          nhà hoa
+        </span>
+        <p>{label}</p>
+        <span className="bloom-loader-dots" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
       </div>
-      <span className="bloom-loader-name" aria-hidden="true">
-        nhà hoa
-      </span>
-      <p>{label}</p>
-      <span className="bloom-loader-dots" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-      </span>
-    </div>
+    </div>,
+    document.body,
   );
 }

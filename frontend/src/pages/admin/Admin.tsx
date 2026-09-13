@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useLocation } from "react-router-dom";
 import {
   Flower2,
   Package,
@@ -8,8 +8,9 @@ import {
   Plus,
   Pencil,
   ArrowUpRight,
+  Trash2,
 } from "lucide-react";
-import { useStore } from "../store";
+import { useStore } from "../../store";
 import {
   api,
   post,
@@ -19,8 +20,21 @@ import {
   occasions,
   type Product,
   type Order,
-} from "../types";
-import { PageHeading } from "../components";
+} from "../../types";
+import { PageHeading } from "../../components";
+import { AdminNav } from "./AdminNav";
+
+const imageFile = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    if (!/image\/(jpeg|png|webp)/.test(file.type))
+      return reject(new Error("Chỉ nhận ảnh JPEG, PNG hoặc WebP."));
+    if (file.size > 1500000)
+      return reject(new Error("Ảnh tải lên tối đa 1,5MB."));
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Không thể đọc ảnh từ máy."));
+    reader.readAsDataURL(file);
+  });
 const moves: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["preparing", "cancelled"],
@@ -49,10 +63,18 @@ type Inquiry = {
   email: string;
   message: string;
   created_at: string;
+  resolved?: boolean;
 };
 export default function Admin() {
   const { user, authLoading, reload } = useStore();
-  const [tab, setTab] = useState("overview");
+  const location = useLocation();
+  const [tab, setTab] = useState(() =>
+    location.pathname.split("/").pop() === "products" ||
+    location.pathname.split("/").pop() === "orders" ||
+    location.pathname.split("/").pop() === "inquiries"
+      ? location.pathname.split("/").pop()!
+      : "overview",
+  );
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -61,6 +83,20 @@ export default function Admin() {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
   const [notice, setNotice] = useState("");
+  const resolveInquiry = async (inquiry: Inquiry) => {
+    setBusy(true);
+    try {
+      await api(`/admin/inquiries/${inquiry.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ resolved: !inquiry.resolved }),
+      });
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
   const load = async () => {
     setLoading(true);
     try {
@@ -82,6 +118,14 @@ export default function Admin() {
   useEffect(() => {
     if (user?.role === "admin") void load();
   }, [user]);
+  useEffect(() => {
+    const next = location.pathname.split("/").pop();
+    if (next === "products" || next === "orders" || next === "inquiries") {
+      setTab(next);
+    } else if (location.pathname === "/quan-tri") {
+      setTab("overview");
+    }
+  }, [location.pathname]);
   if (authLoading)
     return (
       <p className="wrap section" role="status">
@@ -138,6 +182,19 @@ export default function Admin() {
       setBusy(false);
     }
   };
+  const removeProduct = async (product: Product) => {
+    if (!window.confirm(`Xóa sản phẩm ${product.name}?`)) return;
+    setBusy(true);
+    try {
+      await api(`/admin/products/${product.id}`, { method: "DELETE" });
+      await load();
+      reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <>
       <PageHeading
@@ -146,26 +203,7 @@ export default function Admin() {
         description="Quản lý hoa, đơn hàng và những lời nhắn của khách."
       />
       <section className="admin-layout wrap section-bottom">
-        <nav className="admin-nav" aria-label="Quản trị">
-          {[
-            { id: "overview", label: "Tổng quan", Icon: LayoutDashboard },
-            { id: "products", label: "Sản phẩm", Icon: Flower2 },
-            { id: "orders", label: "Đơn hàng", Icon: Package },
-            { id: "inquiries", label: "Lời nhắn", Icon: MessageSquare },
-          ].map((t) => (
-            <button
-              key={t.id}
-              className={tab === t.id ? "active" : ""}
-              onClick={() => {
-                setTab(t.id);
-                setEditing(null);
-              }}
-            >
-              <t.Icon size={18} />
-              {t.label}
-            </button>
-          ))}
-        </nav>
+        <AdminNav />
         <div className="admin-content">
           {error && (
             <p role="alert" className="form-error">
@@ -240,7 +278,6 @@ export default function Admin() {
                         label: "Đường dẫn (không dấu, dùng dấu -)",
                       },
                       { key: "flowers", label: "Thành phần hoa" },
-                      { key: "image", label: "Đường dẫn ảnh" },
                     ].map((f) => (
                       <label className="field" key={f.key}>
                         {f.label}
@@ -253,6 +290,51 @@ export default function Admin() {
                         />
                       </label>
                     ))}
+                    <label className="field full">
+                      Ảnh sản phẩm
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            setEditing({
+                              ...editing,
+                              image: await imageFile(file),
+                            });
+                          } catch (error) {
+                            setError((error as Error).message);
+                            e.currentTarget.value = "";
+                          }
+                        }}
+                      />
+                      <small>
+                        JPEG, PNG hoặc WebP · tối đa 1,5MB. Ảnh hiện tại vẫn
+                        được giữ nếu bạn không chọn ảnh mới.
+                      </small>
+                      {editing.image && (
+                        <img
+                          className="admin-image-preview"
+                          src={String(editing.image)}
+                          alt="Xem trước ảnh sản phẩm"
+                        />
+                      )}
+                    </label>
+                    <label className="field full">
+                      Nhãn sản phẩm (badge)
+                      <input
+                        maxLength={40}
+                        value={String(editing.badge || "")}
+                        placeholder="Ví dụ: Bán chạy, Mới về…"
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            badge: e.target.value.trim() || null,
+                          })
+                        }
+                      />
+                    </label>
                     <label className="field">
                       Kiểu dáng
                       <select
@@ -381,7 +463,7 @@ export default function Admin() {
                         <td>{p.active ? "Đang bán" : "Đã ẩn"}</td>
                         <td>
                           <button
-                            className="icon-button"
+                            className="icon-button admin-action-icon"
                             aria-label={"Sửa " + p.name}
                             onClick={() => {
                               setEditing({ ...p });
@@ -392,6 +474,14 @@ export default function Admin() {
                             }}
                           >
                             <Pencil size={17} />
+                          </button>
+                          <button
+                            className="icon-button admin-action-icon"
+                            aria-label={"Xóa " + p.name}
+                            disabled={busy}
+                            onClick={() => void removeProduct(p)}
+                          >
+                            <Trash2 size={17} />
                           </button>
                         </td>
                       </tr>
@@ -447,6 +537,9 @@ export default function Admin() {
                   </div>
                 </article>
               ))}
+              <Link className="admin-extra-link" to="/quan-tri/order-calendar">
+                Lịch giao & vận hành <ArrowUpRight size={15} />
+              </Link>
             </>
           )}
           {tab === "inquiries" && (
@@ -460,7 +553,12 @@ export default function Admin() {
                     {i.email}
                   </a>
                   <p className="preserve-lines">{i.message}</p>
-                  <small>{i.created_at}</small>
+                  <div className="section-heading">
+                    <small>{i.created_at}</small>
+                    <button className="button outline small" disabled={busy} onClick={() => void resolveInquiry(i)}>
+                      {i.resolved ? "Mở lại" : "Đã xử lý"}
+                    </button>
+                  </div>
                 </article>
               ))}
             </>

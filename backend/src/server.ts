@@ -55,7 +55,7 @@ app.use(
     },
   }),
 );
-app.use(express.json({ limit: "100kb" }));
+app.use(express.json({ limit: "3mb" }));
 app.use(cookieParser());
 const origins = new Set([
   process.env.FRONTEND_ORIGIN || "http://127.0.0.1:5173",
@@ -67,7 +67,10 @@ app.use(
   rateLimit({
     windowMs: 60000,
     // Browser suites share one IP and load many pages; retain real limits outside isolated tests.
-    limit: process.env.NODE_ENV==='test'&&db.databaseName.endsWith('_test')?1000:180,
+    limit:
+      process.env.NODE_ENV === "test" && db.databaseName.endsWith("_test")
+        ? 1000
+        : 180,
     standardHeaders: "draft-8",
     legacyHeaders: false,
     message: { error: "Quá nhiều yêu cầu. Vui lòng thử lại sau một phút." },
@@ -109,7 +112,10 @@ const passwordLimiter = rateLimit({
   message: { error: "Vui lòng thử thay đổi bảo mật sau 15 phút." },
 });
 const dummyPasswordHash = bcrypt.hashSync(randomBytes(24).toString("hex"), 12);
-type PublicUser = Pick<User, "id" | "name" | "email" | "role" | "phone" | "address">;
+type PublicUser = Pick<
+  User,
+  "id" | "name" | "email" | "role" | "phone" | "address" | "banned"
+>;
 declare global {
   namespace Express {
     interface Request {
@@ -124,6 +130,7 @@ const publicUser = (user: User): PublicUser => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  banned: Boolean(user.banned),
   phone: user.phone || "",
   address: user.address || "",
 });
@@ -137,7 +144,7 @@ app.use("/api", async (req, _res, next) => {
       if (record) {
         const user = await users.findOne({ id: record.user_id });
         if (
-          user &&
+          user && !user.banned &&
           (record.session_version || 0) === (user.session_version || 0)
         )
           req.user = publicUser(user);
@@ -217,29 +224,42 @@ app.post("/api/auth/login", authLimiter, accountLimiter, async (req, res) => {
   );
   if (!user || !matches)
     return res.status(401).json({ error: "Email hoặc mật khẩu chưa đúng." });
+  if (user.banned)
+    return res.status(403).json({ error: "Tài khoản đang bị khóa. Vui lòng liên hệ Nhà Hoa." });
   await createSession(res, user, req.cookies.session);
   res.json(publicUser(user));
 });
 app.get("/api/auth/me", (req, res) => res.json(req.user || null));
 app.patch("/api/auth/profile", required, async (req, res) => {
-  const input = z.object({
-    name: registration.shape.name,
-    phone: z.union([checkoutInput.shape.phone, z.literal("")]),
-    address: z.union([checkoutInput.shape.address, z.literal("")]),
-  }).strict().parse(req.body);
+  const input = z
+    .object({
+      name: registration.shape.name,
+      phone: z.union([checkoutInput.shape.phone, z.literal("")]),
+      address: z.union([checkoutInput.shape.address, z.literal("")]),
+    })
+    .strict()
+    .parse(req.body);
   const user = await users.findOneAndUpdate(
-    { id: req.user!.id }, { $set: input }, { returnDocument: "after" },
+    { id: req.user!.id },
+    { $set: input },
+    { returnDocument: "after" },
   );
   if (!user) return res.status(401).json({ error: "Vui lòng đăng nhập lại." });
   res.json(publicUser(user));
 });
 app.get("/api/orders/:id", required, async (req, res) => {
-  const id = z.string().regex(/^NH[a-f0-9]{10}$/i).parse(req.params.id);
+  const id = z
+    .string()
+    .regex(/^NH[a-f0-9]{10}$/i)
+    .parse(req.params.id);
   const order = await orders.findOne(
     { id: id.toUpperCase(), user_id: req.user!.id },
     { projection: { _id: 0, user_id: 0 } },
   );
-  if (!order) return res.status(404).json({ error: "Không tìm thấy đơn hoa trong tài khoản của bạn." });
+  if (!order)
+    return res
+      .status(404)
+      .json({ error: "Không tìm thấy đơn hoa trong tài khoản của bạn." });
   res.json(order);
 });
 app.post("/api/auth/logout", async (req, res) => {
@@ -426,6 +446,103 @@ app.post("/api/subscribe", messageLimiter, async (req, res) => {
   res.json({ ok: true });
 });
 app.use("/api/admin", required, admin);
+app.get("/api/admin/customers", async (_req, res) => {
+  res.json(
+    await users
+      .find(
+        {},
+        {
+          projection: {
+            _id: 0,
+            id: 1,
+            name: 1,
+            email: 1,
+            phone: 1,
+            address: 1,
+            role: 1,
+            banned: 1,
+            created_at: 1,
+          },
+        },
+      )
+      .sort({ created_at: -1 })
+      .toArray(),
+  );
+});
+app.patch("/api/admin/customers/:id", async (req, res) => {
+  const id = z.coerce.number().int().positive().parse(req.params.id);
+  const input = z.object({
+    banned: z.boolean().optional(),
+    name: z.string().trim().min(2).max(120).optional(),
+    email: z.string().trim().email().max(160).optional(),
+    phone: z.string().trim().max(30).optional(),
+    address: z.string().trim().max(240).optional(),
+  }).strict().refine((value) => Object.keys(value).length > 0).parse(req.body);
+  const target = await users.findOne({ id });
+  if (!target) return res.status(404).json({ error: "Kh\u00f4ng t\u00ecm th\u1ea5y ng\u01b0\u1eddi d\u00f9ng." });
+  if (target.role === "admin" && input.banned !== undefined) return res.status(403).json({ error: "Kh\u00f4ng th\u1ec3 kh\u00f3a t\u00e0i kho\u1ea3n qu\u1ea3n tr\u1ecb vi\u00ean." });
+  if (input.email && input.email !== target.email && await users.findOne({ email: input.email })) return res.status(409).json({ error: "Email ?\u00e3 ???c s? d?ng." });
+  const { banned, ...profile } = input;
+  const update: Record<string, unknown> = { ...profile };
+  if (banned !== undefined) update.banned = banned;
+  await users.updateOne({ id }, { $set: update, ...(banned ? { $inc: { session_version: 1 } } : {}) });
+  if (banned) await sessions.deleteMany({ user_id: id });
+  res.json({ ok: true, ...input });
+});
+app.get("/api/admin/subscribers", async (_req, res) => {
+  res.json(
+    await subscribers.find({}, publicFields).sort({ created_at: -1 }).toArray(),
+  );
+});
+app.delete("/api/admin/subscribers", async (req, res) => {
+  const input = z.object({ email }).strict().parse(req.body);
+  await subscribers.deleteOne({ email: input.email });
+  res.json({ ok: true });
+});
+app.patch("/api/admin/inventory/:id", async (req, res) => {
+  const id = z.coerce.number().int().positive().parse(req.params.id);
+  const { delta } = z
+    .object({
+      delta: z
+        .number()
+        .int()
+        .min(-10000)
+        .max(10000)
+        .refine((value) => value !== 0),
+    })
+    .strict()
+    .parse(req.body);
+  const result = await products.findOneAndUpdate(
+    {
+      id,
+      stock: {
+        $gte: Math.max(0, -delta),
+        $lte: Math.min(10000, 10000 - delta),
+      },
+    },
+    { $inc: { stock: delta } },
+    { returnDocument: "after", projection: { _id: 0 } },
+  );
+  if (!result)
+    return res
+      .status(409)
+      .json({
+        error:
+          "Không thể điều chỉnh tồn kho. Hãy tải lại và kiểm tra số lượng (0–10.000).",
+      });
+  res.json(result);
+});
+app.patch("/api/admin/inquiries/:id", async (req, res) => {
+  const id = z.coerce.number().int().positive().parse(req.params.id);
+  const { resolved } = z
+    .object({ resolved: z.boolean() })
+    .strict()
+    .parse(req.body);
+  const result = await inquiries.updateOne({ id }, { $set: { resolved } });
+  if (!result.matchedCount)
+    return res.status(404).json({ error: "Không tìm thấy lời nhắn." });
+  res.json({ ok: true });
+});
 app.get("/api/admin/products", async (_req, res) =>
   res.json(await products.find({}, publicFields).sort({ id: -1 }).toArray()),
 );
@@ -443,11 +560,24 @@ app.put("/api/admin/products/:id", async (req, res) => {
     return res.status(404).json({ error: "Không tìm thấy sản phẩm." });
   res.json({ ok: true });
 });
+app.delete("/api/admin/products/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: "ID không hợp lệ" });
+  const result = await products.deleteOne({ id });
+  if (!result.deletedCount) return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
+  res.json({ ok: true });
+});
 app.get("/api/admin/orders", async (_req, res) =>
   res.json(
     await orders.find({}, publicFields).sort({ created_at: -1 }).toArray(),
   ),
 );
+app.delete("/api/admin/orders/:id", async (req, res) => {
+  const id = String(req.params.id);
+  const result = await orders.deleteOne({ id });
+  if (!result.deletedCount) return res.status(404).json({ error: "Kh?ng t?m th?y ??n h?ng." });
+  res.json({ ok: true });
+});
 app.get("/api/admin/inquiries", async (_req, res) =>
   res.json(
     await inquiries.find({}, publicFields).sort({ created_at: -1 }).toArray(),

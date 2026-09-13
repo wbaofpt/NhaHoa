@@ -6,6 +6,7 @@ import {
   transitions,
   todayVN,
   registration,
+  productInput,
 } from "./validation.js";
 test("shipping fee threshold and total are calculated using integer VND", () => {
   assert.deepEqual(totals([{ price: 350000, quantity: 2 }]), {
@@ -93,4 +94,38 @@ test("terminal orders cannot be cancelled or reopened", () => {
   assert.deepEqual(transitions.delivered, []);
   assert.deepEqual(transitions.cancelled, []);
   assert.equal(transitions.shipping.includes("cancelled"), false);
+});
+test("product images accept safe local data URLs and badges stay bounded", () => {
+  const base = {
+    name: "Hoa test",
+    slug: "hoa-test",
+    category: "Bó hoa",
+    occasion: "Sinh nhật",
+    price: 100000,
+    description: "Mô tả sản phẩm đủ dài",
+    flowers: "Hồng",
+    stock: 1,
+    active: true,
+  };
+  assert.equal(
+    productInput.safeParse({
+      ...base,
+      image: "data:image/png;base64,AAAA",
+      badge: "Mới về",
+    }).success,
+    true,
+  );
+  assert.equal(
+    productInput.safeParse({ ...base, image: "data:text/html;base64,AAAA" })
+      .success,
+    false,
+  );
+  assert.equal(
+    productInput.safeParse({
+      ...base,
+      image: "/images/rose.jpg",
+      badge: "x".repeat(41),
+    }).success,
+    false,
+  );
 });

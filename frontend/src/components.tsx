@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -15,10 +15,18 @@ import {
   Leaf,
   Minus,
   Plus,
+  MessageCircle,
+  Phone,
 } from "lucide-react";
 import { useStore } from "./store";
 import { BloomLoader } from "./PageMotion";
 import { api, post, money, type Product } from "./types";
+
+export function SupportFloat() {
+  const zalo = import.meta.env.VITE_ZALO_URL || "https://zalo.me/0900000000";
+  const phone = import.meta.env.VITE_SUPPORT_PHONE || "0900000000";
+  return <div className="support-float" aria-label="Liên hệ hỗ trợ"><a href={zalo} target="_blank" rel="noreferrer" aria-label="Chat Zalo"><MessageCircle size={20} /><span>Zalo</span></a><a href={`tel:${phone}`} aria-label="Gọi điện hỗ trợ"><Phone size={19} /><span>Gọi ngay</span></a></div>;
+}
 export function Logo({ light = false }: { light?: boolean }) {
   return (
     <Link
@@ -34,16 +42,29 @@ export function Logo({ light = false }: { light?: boolean }) {
   );
 }
 export function Header() {
-  const { cart, favorites } = useStore();
+  const { cart, favorites, products } = useStore();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const searchRef = useRef<HTMLFormElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
     setOpen(false);
     setSearch(false);
   }, [location.pathname]);
+  useEffect(() => {
+    if (!search) return;
+    const closeOnOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setSearch(false);
+        setSuggestionsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", closeOnOutside);
+    return () => document.removeEventListener("mousedown", closeOnOutside);
+  }, [search]);
   return (
     <>
       <div className="announcement">
@@ -124,6 +145,7 @@ export function Header() {
           <form
             id="header-search"
             className="header-search"
+            ref={searchRef}
             onSubmit={(e) => {
               e.preventDefault();
               navigate("/hoa?q=" + encodeURIComponent(query));
@@ -131,13 +153,20 @@ export function Header() {
             }}
           >
             <label htmlFor="search-top">Bạn đang tìm hoa gì?</label>
+            <div className="search-input-wrap">
             <input
               id="search-top"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => { setQuery(e.target.value); setSuggestionsOpen(Boolean(e.target.value.trim())); }}
               placeholder="Thử tìm hoa hồng, tulip…"
+              list="flower-search-suggestions"
               autoFocus
             />
+            {suggestionsOpen && query.trim() && <div className="search-suggestions" role="listbox">
+              {products.filter((product) => `${product.name} ${product.category} ${product.occasion}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).slice(0, 6).map((product) => <button type="button" key={product.id} role="option" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQuery(product.name); setSuggestionsOpen(false); }}><img src={product.image} alt="" /><span><strong>{product.name}</strong><small>{product.category} {"\u00b7"} {product.occasion}</small></span></button>)}
+              {!products.some((product) => `${product.name} ${product.category} ${product.occasion}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())) && <p>{"\u0043h\u01b0a t\u00ecm th\u1ea5y m\u1eabu hoa ph\u00f9 h\u1ee3p."}</p>}
+            </div>}
+            </div>
             <button className="button small">
               Tìm hoa <Search size={16} />
             </button>

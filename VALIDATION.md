@@ -2,6 +2,15 @@
 
 ## Kết quả mới nhất — 12/09/2026
 
+- Form admin sản phẩm hỗ trợ chọn ảnh JPEG/PNG/WebP từ máy, xem trước và lưu data URL tối đa 1,5MB; backend từ chối loại ảnh khác và giới hạn badge 40 ký tự. Unit test xác nhận data URL an toàn và badge quá dài bị từ chối. Build và 7/7 unit test đạt; kiểm thử admin UI đạt.
+- Thanh bên `Admin.tsx` đã được đồng bộ để hiển thị tất cả route admin: 4 mục lõi, 4 mục dữ liệu và 4 mục vận hành. Kiểm thử đăng nhập/chỉnh sửa admin đạt sau thay đổi.
+
+- Điều kiện màn chào đã được sửa: chỉ lần đầu mở tab ở trang chủ, không lặp khi đổi trang/quay lại/reload; mở trực tiếp cửa hàng khi API đang chờ cũng không phủ màn hình. Build thành công và 3 kiểm thử motion đạt. Các ghi nhận màn phủ trên mọi điều hướng bên dưới là lịch sử, không còn là hành vi hiện tại.
+- Admin được tổ chức trong `frontend/src/pages/admin/`: trang chính quản lý sản phẩm/đơn/lời nhắn và các trang riêng cho tồn kho, khách hàng, người nhận tin, báo cáo. Build và kiểm thử giao diện admin đạt.
+- Bổ sung trang vận hành: lịch giao hoa, cảnh báo tồn kho dưới 5 bó, nhật ký hoạt động và cài đặt vận hành chỉ đọc. Các route bổ sung được bọc `AdminAccess`, redirect người chưa đăng nhập và chặn customer.
+
+- Điều chỉnh tiếp: chuyển cảnh 950ms, màn hoa mờ dần 900ms; loader dùng portal phủ toàn viewport. Kiểm tra kích thước phủ màn hình, inert được bật/tắt đúng, reduced motion, điều hướng nhanh, accessibility và ba luồng cửa hàng/mobile/thanh toán: 6 kiểm thử liên quan đạt sau khi cho phép animation bị hủy bình thường trong bước chụp ảnh. Build thành công, đã xem ảnh loader toàn màn hình.
+
 - Bổ sung chuyển cảnh và BloomLoader: build thành công, toàn bộ 17 E2E test đạt. Kiểm tra điều hướng nhanh/Back, giữ focus khi tìm kiếm, loader với API bị giữ chờ, kết thúc loading và reduced motion. Đã xem ảnh `.local/bloom-loading.png`.
 
 - `npm run build` thành công; `npm test` đạt 6/6; `npm run test:e2e` đạt 15/15 trong một lượt chạy toàn bộ.

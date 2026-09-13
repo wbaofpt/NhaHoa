@@ -18,11 +18,13 @@ export type User = {
   name: string;
   email: string;
   role: "admin" | "customer";
+  banned?: boolean;
   phone?: string;
   address?: string;
 };
 export type CartItem = { product: Product; quantity: number };
 export type Order = {
+  user_id?: number | null;
   id: string;
   status: string;
   recipient: string;

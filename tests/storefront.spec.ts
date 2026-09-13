@@ -18,7 +18,7 @@ test("home, product search, favorites and cart persist", async ({ page }) => {
   await expect(page.locator(".product-card")).toHaveCount(4);
   await page.evaluate(async () => {
     await document.fonts.ready;
-    await Promise.all(document.getAnimations().map((a) => a.finished));
+    await Promise.allSettled(document.getAnimations().map((a) => a.finished));
   });
   await page.screenshot({ path: ".local/home-desktop.png", fullPage: true });
   await page.goto("/hoa");
@@ -91,7 +91,7 @@ test("mobile menu and public pages have no horizontal overflow", async ({
   await page.goto("/");
   await page.evaluate(async () => {
     await document.fonts.ready;
-    await Promise.all(document.getAnimations().map((a) => a.finished));
+    await Promise.allSettled(document.getAnimations().map((a) => a.finished));
   });
   await page.screenshot({ path: ".local/home-mobile.png", fullPage: true });
 });

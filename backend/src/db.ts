@@ -14,6 +14,7 @@ export type User = {
   name: string;
   email: string;
   role: "customer" | "admin";
+  banned?: boolean;
   phone?: string;
   address?: string;
   password_hash: string;
@@ -58,6 +59,7 @@ export const sessions = db.collection<{
   expires_at: Date;
 }>("sessions");
 export const inquiries = db.collection<{
+  resolved?: boolean;
   id: number;
   name: string;
   email: string;

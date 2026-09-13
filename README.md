@@ -38,11 +38,14 @@ Thay username, password và cluster bằng thông tin thật; ký tự đặc bi
 
 `npm run db:setup` tạo indexes, nạp 12 mẫu hoa và tạo admin nếu chưa có. Lệnh không ghi đè sản phẩm hoặc tài khoản đã tồn tại. Thay `ADMIN_PASSWORD` trong `.env` không tự đổi mật khẩu tài khoản cũ.
 
+Trong `/quan-tri/products`, quản trị viên có thể chọn ảnh JPEG/PNG/WebP từ máy (tối đa 1,5MB); ảnh được gửi dưới dạng data URL hợp lệ và lưu cùng sản phẩm trong MongoDB. Form hiển thị ảnh xem trước và cho phép nhập hoặc xóa badge tối đa 40 ký tự. Không nhận SVG, HTML hay loại file khác.
+
 ## Cấu trúc
 
 ```text
 frontend/
   src/pages/          Trang cửa hàng, mua hàng, tài khoản, nội dung và quản trị
+  src/pages/admin/    Admin, tồn kho, khách hàng, người nhận tin và báo cáo
   src/components.tsx  Thành phần giao diện chung
   src/store.tsx       Giỏ hoa, yêu thích và tài khoản
   public/             Logo, ảnh local
@@ -73,7 +76,10 @@ tests/
 | `/dang-nhap`, `/dang-ky`, `/tai-khoan`, `/tra-cuu` | Tài khoản và theo dõi đơn |
 | `/ve-nha-hoa`, `/chuyen-nha-hoa`, `/chuyen-nha-hoa/:slug` | Giới thiệu và bài viết |
 | `/lien-he`, `/cau-hoi`, `/chinh-sach/:slug` | Lời nhắn, giải đáp, chính sách |
-| `/quan-tri` | Sản phẩm, tồn kho, đơn và lời nhắn khách hàng |
+| `/quan-tri` | Tổng quan quản trị và điều hướng toàn bộ khu vực admin |
+| `/quan-tri/products`, `/quan-tri/orders`, `/quan-tri/inquiries` | Quản lý sản phẩm, trạng thái đơn và lời nhắn |
+| `/quan-tri/inventory`, `/quan-tri/customers`, `/quan-tri/subscribers`, `/quan-tri/reports` | Tồn kho, khách hàng, người nhận tin và báo cáo |
+| `/quan-tri/order-calendar`, `/quan-tri/alerts`, `/quan-tri/activity`, `/quan-tri/settings` | Lịch giao, cảnh báo tồn kho, nhật ký hoạt động và cài đặt vận hành |
 | `/tai-khoan/bao-mat` | Đổi mật khẩu, đăng xuất mọi thiết bị |
 | `/bo-suu-tap/:slug` | 5 trang dịp tặng, cách chọn và sản phẩm từ MongoDB |
 | `/dich-vu`, `/dich-vu/:slug` | Hoa theo yêu cầu, hoa cưới, hoa doanh nghiệp; liên kết tư vấn có sẵn chủ đề |
@@ -91,8 +97,9 @@ Khách có thể xem/tìm hoa, thêm vào giỏ, đọc bài và gửi liên h�
 
 ## Hiệu ứng và bảo mật bổ sung
 
-- `PageMotion.tsx` tạo chuyển cảnh 420ms khi đổi đường dẫn và dải màu trang trí 650ms. Hiệu ứng cũ được hủy khi điều hướng tiếp; thay bộ lọc/query không chạy lại chuyển cảnh hoặc tạo lại biểu mẫu. Không trì hoãn điều hướng để chờ animation.
-- `BloomLoader` dùng logo Nhà Hoa, quỹ đạo cánh hoa và chấm nhịp cho thời gian tải catalog, phiên đăng nhập hoặc trang lazy. Skeleton có ánh sáng lướt; thông báo tải dùng `role=status`. Reduced motion tắt cả CSS animation và chuyển cảnh WAAPI, kể cả khi đổi cài đặt giữa chừng.
+- `PageMotion.tsx` tạo chuyển cảnh nội dung 950ms khi đổi đường dẫn, không phủ màn hình. Hiệu ứng cũ được hủy khi điều hướng tiếp; thay bộ lọc/query không chạy lại chuyển cảnh hoặc tạo lại biểu mẫu.
+- `HomeWelcome` chỉ hiển thị màn chào toàn màn hình khi lần đầu mở tab tại `/` và catalog đang tải. `sessionStorage` ghi nhận lần vào web để không lặp lại khi điều hướng, quay lại trang chủ hoặc reload trong cùng tab. Mở thẳng trang khác không có màn chào. Nếu trình duyệt chặn storage, trạng thái vẫn giữ trong lần chạy ứng dụng hiện tại.
+- Các lần tải catalog, phiên đăng nhập hoặc trang lazy còn lại chỉ hiển thị thông báo tại chỗ và skeleton. Chỉ màn chào ban đầu mới khóa cuộn và đặt nội dung sau nó thành inert; trạng thái được khôi phục khi tải xong. Reduced motion tắt CSS animation và chuyển cảnh WAAPI.
 
 - Các khối nội dung hiện dần khi vào màn hình bằng IntersectionObserver; cánh hoa banner chạy một lượt, phản hồi yêu thích/nút/menu bằng transform/opacity. Reduced motion giữ nội dung hiển thị, tắt hiệu ứng không thiết yếu.
 - Collection `favorites` dùng unique index `user_id + product_id`; yêu thích đồng bộ theo tài khoản, không chia sẻ giữa người dùng cùng trình duyệt.

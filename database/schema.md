@@ -24,6 +24,8 @@ Hồ sơ chỉ cập nhật `name`, `phone`, `address` của người đang đă
 
 `indexes.json` định nghĩa index unique, query và TTL. `npm run db:setup` tạo index, nạp `seed.json` bằng `$setOnInsert`, đồng bộ counters và tạo admin nếu chưa có. Không ghi đè tài khoản/sản phẩm đã tồn tại.
 
+Các endpoint quản trị bổ sung gồm `GET /admin/customers`, `GET /admin/subscribers` và `PATCH /admin/inventory/:id`. Chúng nằm sau middleware admin; điều chỉnh tồn kho là phép cộng/trừ nguyên tử, giới hạn 0–10.000.
+
 Đầu vào API được kiểm tra bằng Zod ở `backend/src/validation.ts`; chỉ dùng bộ lọc MongoDB do server tạo, không nhận toán tử MongoDB từ JSON khách gửi.
 
 Tham khảo: [MongoDB transactions](https://www.mongodb.com/docs/drivers/node/current/crud/transactions/), [compound operations](https://www.mongodb.com/docs/drivers/node/current/crud/compound-operations/).
