@@ -46,6 +46,10 @@ const phoneCodes = db.collection<PhoneCode>("phone_verification_codes");
 import { code as createVerificationCode, digest as digestVerificationCode, sendEmailCode } from "./verification.js";
 const emailCodes = new Map<string, { hash: string; expires: number; sentAt: number }>();
 const app = express();
+// The app is deployed behind one reverse proxy (for example Vite, nginx, or a
+// platform edge). Trust that single hop so express-rate-limit can safely use
+// the client address from X-Forwarded-For without trusting arbitrary chains.
+app.set("trust proxy", 1);
 app.use(
   helmet({
     contentSecurityPolicy: {
