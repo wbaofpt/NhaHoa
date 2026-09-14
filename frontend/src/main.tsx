@@ -1,8 +1,10 @@
-import React, { lazy, Suspense, useEffect } from "react";
+import React, { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { Flower2 } from "lucide-react";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { StoreProvider, useStore } from "./store";
 import { Header, Footer, SupportFloat, ConfirmProvider } from "./components";
+import { api } from "./types";
 import Home from "./pages/Home";
 import { Shop, ProductDetail, Favorites } from "./pages/Shop";
 import { Cart, Checkout, Success } from "./pages/Checkout";
@@ -162,6 +164,42 @@ function NavigationEffects() {
   }, [pathname, products]);
   return null;
 }
+function MaintenanceGate({ children }: { children: ReactNode }) {
+  const { user, setUser } = useStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [maintenance, setMaintenance] = useState(() => {
+    try { return Boolean(JSON.parse(localStorage.getItem("nha-hoa-admin-settings") || "{}").maintenance); } catch { return false; }
+  });
+  useEffect(() => { const check = () => void fetch("/api/maintenance").then((response) => response.json()).then((value: { maintenance?: boolean }) => setMaintenance(Boolean(value.maintenance))).catch(() => undefined); check(); const timer = window.setInterval(check, 15000); return () => window.clearInterval(timer); }, []);
+  useEffect(() => {
+    const update = () => { try { setMaintenance(Boolean(JSON.parse(localStorage.getItem("nha-hoa-admin-settings") || "{}").maintenance)); } catch { setMaintenance(false); } };
+    window.addEventListener("nha-hoa-settings", update); window.addEventListener("storage", update);
+    return () => { window.removeEventListener("nha-hoa-settings", update); window.removeEventListener("storage", update); };
+  }, []);
+  const accessDuringMaintenance = ["/dang-nhap", "/dang-ky", "/quen-mat-khau"].includes(location.pathname) || location.pathname.startsWith("/quan-tri");
+  if (maintenance && user?.role !== "admin" && !accessDuringMaintenance) return <section className="maintenance-page"><Flower2 size={44} strokeWidth={1} /><span className="eyebrow">NHÀ HOA</span><h1>Nhà Hoa đang chăm chút lại không gian.</h1><p>Website tạm thời bảo trì để mang đến trải nghiệm tốt hơn. Bạn hãy quay lại sau ít phút nhé.</p><button className="button" onClick={async () => { try { await api("/auth/logout", { method: "POST" }); } finally { setUser(null); navigate("/dang-nhap?next=%2Fquan-tri"); } }}>Đăng nhập quản trị</button></section>;
+  return <>{children}</>;
+}
+function RouteSupport() {
+  const location = useLocation();
+  return location.pathname.startsWith("/quan-tri") ? null : <SupportFloat />;
+}
+function CustomCursor() {
+  const cursor = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const fine = window.matchMedia("(pointer: fine)");
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (!fine.matches || reduced.matches) return;
+    const node = cursor.current; if (!node) return;
+    const move = (event: PointerEvent) => { node.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0)`; };
+    const over = (event: PointerEvent) => { if ((event.target as Element)?.closest("a,button,input,textarea,select")) node.classList.add("is-active"); };
+    const out = (event: PointerEvent) => { if (!(event.relatedTarget as Element)?.closest?.("a,button,input,textarea,select")) node.classList.remove("is-active"); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerover", over); window.addEventListener("pointerout", out);
+    return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerover", over); window.removeEventListener("pointerout", out); };
+  }, []);
+  return <div ref={cursor} className="custom-cursor" aria-hidden="true"><img className="custom-cursor-flower" src="/flower-cursor.png" alt="" /></div>;
+}
 function App() {
   return (
     <BrowserRouter>
@@ -169,6 +207,7 @@ function App() {
         <NavigationEffects />
         <HomeWelcome />
         <MotionEffects />
+        <CustomCursor />
         <a className="skip-link" href="#main">
           Đến nội dung chính
         </a>
@@ -177,7 +216,7 @@ function App() {
           <Suspense
             fallback={<BloomLoader label="Nhà đang mở trang cho bạn…" />}
           >
-            <Routes>
+            <MaintenanceGate><Routes>
               <Route path="/" element={<Home />} />
               <Route path="/hoa" element={<Shop />} />
               <Route path="/hoa/:slug" element={<ProductDetail />} />
@@ -249,10 +288,10 @@ function App() {
                   </AuthGate>
                 }
               />
-              <Route path="/quan-tri" element={<Admin />} />
-              <Route path="/quan-tri/products" element={<Admin />} />
-              <Route path="/quan-tri/orders" element={<Admin />} />
-              <Route path="/quan-tri/inquiries" element={<Admin />} />
+              <Route path="/quan-tri" element={<AdminAccess><Admin /></AdminAccess>} />
+              <Route path="/quan-tri/products" element={<AdminAccess><Admin /></AdminAccess>} />
+              <Route path="/quan-tri/orders" element={<AdminAccess><Admin /></AdminAccess>} />
+              <Route path="/quan-tri/inquiries" element={<AdminAccess><Admin /></AdminAccess>} />
               <Route
                 path="/quan-tri/inventory"
                 element={
@@ -337,11 +376,11 @@ function App() {
                 }
               />
               <Route path="*" element={<NotFound />} />
-            </Routes>
+            </Routes></MaintenanceGate>
           </Suspense>
         </PageMotion>
         <Footer />
-        <SupportFloat />
+        <RouteSupport />
       </ConfirmProvider></StoreProvider>
     </BrowserRouter>
   );

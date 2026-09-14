@@ -118,21 +118,7 @@ export function Auth({ register = false }: { register?: boolean }) {
             : "Đăng nhập để tiếp tục gửi những điều yêu thương."}
         </p>
         <form onSubmit={submit}>
-          {next && !register && (
-            <p className="soft-note">
-              Đăng nhập để tiếp tục{" "}
-              {next.startsWith("/gio-hang")
-                ? "xem giỏ hoa"
-                : next.startsWith("/thanh-toan")
-                ? "đặt hoa"
-                : next.startsWith("/yeu-thich")
-                  ? "lưu những bó hoa yêu thích"
-                  : next.startsWith("/tra-cuu")
-                    ? "theo dõi đơn hoa"
-                    : "mở góc riêng của bạn"}
-              . Giỏ hoa của bạn vẫn được giữ lại.
-            </p>
-          )}
+          {next && !register && <p className="soft-note">Đăng nhập để tiếp tục. Bạn có thể tiếp tục ngay sau khi đăng nhập.</p>}
           {register && (
             <label className="field">
               Tên của bạn

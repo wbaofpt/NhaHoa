@@ -15,8 +15,8 @@ export default function AdminExtra() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState("");
-  const [settings, setSettings] = useState<{ addresses: string[] }>(() => {
-    try { const value = JSON.parse(localStorage.getItem("nha-hoa-admin-settings") || "{}"); return { ...value, addresses: Array.isArray(value.addresses) ? value.addresses : value.address ? [value.address] : ["TP. Ho Chi Minh"] }; } catch { return { addresses: ["TP. Ho Chi Minh"] }; }
+  const [settings, setSettings] = useState<{ addresses: string[]; maintenance?: boolean }>(() => {
+    try { const value = JSON.parse(localStorage.getItem("nha-hoa-admin-settings") || "{}"); return { ...value, addresses: Array.isArray(value.addresses) ? value.addresses : value.address ? [value.address] : ["TP. Ho Chi Minh"] }; } catch { return { addresses: ["TP. Ho Chi Minh"], maintenance: false }; }
   });  const [saved, setSaved] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const removeOrder = async (id: string) => {
@@ -31,6 +31,7 @@ export default function AdminExtra() {
     localStorage.setItem("nha-hoa-admin-settings", JSON.stringify(settings));
     window.dispatchEvent(new Event("nha-hoa-settings"));
     localStorage.setItem("nha-hoa-home-banner", JSON.stringify(settings));
+    void api("/admin/maintenance", { method: "PUT", body: JSON.stringify({ maintenance: Boolean(settings.maintenance) }) }).catch((e) => setError((e as Error).message));
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2200);
   };
@@ -145,6 +146,7 @@ export default function AdminExtra() {
                     <button className="button outline small" type="button" onClick={() => setSettings({ ...settings, addresses: [...settings.addresses, ""] })}>{"+ Th\u00eam \u0111\u1ecba ch\u1ec9"}</button>
                   </div>
                                   </div>
+                <label className="maintenance-toggle"><input type="checkbox" checked={Boolean(settings.maintenance)} onChange={(e) => setSettings({ ...settings, maintenance: e.target.checked })} /><span><strong>Bật trang bảo trì</strong><small>Khách truy cập sẽ thấy thông báo bảo trì; admin vẫn truy cập được.</small></span></label>
                 <div className="settings-actions">
                   <button className="button" type="submit">L&#x01B0;u c&#x00E0;i &#x0111;&#x1EB7;t</button>
                   {saved && <span className="form-success" role="status">&#x0110;&#x00E3; l&#x01B0;u</span>}

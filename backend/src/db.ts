@@ -80,6 +80,7 @@ export const favorites = db.collection<{
 }>("favorites");
 export type Article = { slug: string; title: string; category: string; intro: string; image: string; sections: string[][]; updated_at: Date };
 export const articles = db.collection<Article>("articles");
+export const siteSettings = db.collection<{ _id: "site"; maintenance?: boolean }>("site_settings");
 export async function nextId(name: string) {
   const counter = await counters.findOneAndUpdate(
     { _id: name },

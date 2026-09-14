@@ -22,6 +22,7 @@ import {
   subscribers,
   favorites,
   articles,
+  siteSettings,
   nextId,
   transaction,
   publicFields,
@@ -214,6 +215,7 @@ app.get("/api/products/:slug", async (req, res) => {
     : res.status(404).json({ error: "Không tìm thấy mẫu hoa." });
 });
 app.get("/api/articles", async (_req, res) => res.json(await articles.find({}, { projection: { _id: 0 } }).sort({ updated_at: -1 }).toArray()));
+app.get("/api/maintenance", async (_req, res) => { const value = await siteSettings.findOne({ _id: "site" }); res.json({ maintenance: Boolean(value?.maintenance) }); });
 app.get("/api/articles/:slug", async (req, res) => {
   const article = await articles.findOne({ slug: String(req.params.slug) }, { projection: { _id: 0 } });
   article ? res.json(article) : res.status(404).json({ error: "Không tìm thấy bài viết." });
@@ -517,6 +519,7 @@ app.post("/api/subscribe", messageLimiter, async (req, res) => {
   res.json({ ok: true });
 });
 app.use("/api/admin", required, admin);
+app.put("/api/admin/maintenance", async (req, res) => { const maintenance = Boolean(req.body?.maintenance); await siteSettings.updateOne({ _id: "site" }, { $set: { maintenance } }, { upsert: true }); res.json({ maintenance }); });
 app.put("/api/admin/articles/:slug", async (req, res) => {
   const input = z.object({ title: z.string().trim().min(2).max(180), category: z.string().trim().min(2).max(80), intro: z.string().trim().max(1000), image: z.string().max(2500000), sections: z.array(z.tuple([z.string().min(2), z.string().min(5)] as const)).max(20) }).strict().parse(req.body);
   const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).parse(req.params.slug);
