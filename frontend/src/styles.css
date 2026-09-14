@@ -4170,7 +4170,7 @@ td {
   body { cursor: none; }
   a, button, input, textarea, select { cursor: none; }
   .custom-cursor { position: fixed; top: 0; left: 0; width: 15px; height: 15px; pointer-events: none; z-index: 9999; transform: translate3d(-100px, -100px, 0); translate: -50% -50%; }
-  .custom-cursor-flower { position: absolute; top: 50%; left: 50%; width: 40px; height: 42px; max-width: none; max-height: none; object-fit: contain; translate: -50% -50%; transition: transform .28s ease; }
+  .custom-cursor-flower { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; max-width: none; max-height: none; object-fit: contain; translate: -50% -50%; transition: transform .28s ease; }
   .custom-cursor.is-active { }
   .custom-cursor.is-active .custom-cursor-flower { transform: rotate(12deg) scale(1.15); }
 }
