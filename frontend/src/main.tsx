@@ -198,7 +198,12 @@ function CustomCursor() {
     window.addEventListener("pointermove", move); window.addEventListener("pointerover", over); window.addEventListener("pointerout", out);
     return () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerover", over); window.removeEventListener("pointerout", out); };
   }, []);
-  return <div ref={cursor} className="custom-cursor" aria-hidden="true"><img className="custom-cursor-flower" src="/flower-cursor.png" alt="" /></div>;
+  return (
+    <div ref={cursor} className="custom-cursor" aria-hidden="true">
+      <img className="custom-cursor-flower custom-cursor-default" src="/flower-cursor.png" alt="" />
+      <img className="custom-cursor-flower custom-cursor-hand" src="/hand-cursor.png" alt="" />
+    </div>
+  );
 }
 function App() {
   return (

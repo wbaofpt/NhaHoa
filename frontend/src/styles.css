@@ -835,7 +835,14 @@
 }
 body {
   margin: 0;
+  scrollbar-color: var(--green) var(--cream);
+  scrollbar-width: thin;
 }
+html::-webkit-scrollbar { width: 12px; height: 12px; }
+html::-webkit-scrollbar-track { background: var(--cream); border-left: 1px solid var(--line); }
+html::-webkit-scrollbar-thumb { min-height: 72px; border: 3px solid var(--cream); border-radius: 10px; background: var(--green); }
+html::-webkit-scrollbar-thumb:hover { background: var(--dark); }
+html::-webkit-scrollbar-corner { background: var(--cream); }
 button,
 input,
 textarea,
@@ -4167,14 +4174,21 @@ td {
 .header-nav a::after { content: ""; position: absolute; left: 0; right: 100%; bottom: -7px; height: 1px; background: var(--rose); transition: right .3s ease; }
 .header-nav a:hover::after, .header-nav a.active::after { right: 0; }
 @media (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  body { cursor: none; }
-  a, button, input, textarea, select { cursor: none; }
+  html, body, *, *::before, *::after { cursor: none !important; }
   .custom-cursor { position: fixed; top: 0; left: 0; width: 15px; height: 15px; pointer-events: none; z-index: 9999; transform: translate3d(-100px, -100px, 0); translate: -50% -50%; }
-  .custom-cursor-flower { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; max-width: none; max-height: none; object-fit: contain; translate: -50% -50%; transition: transform .28s ease; }
-  .custom-cursor.is-active { }
-  .custom-cursor.is-active .custom-cursor-flower { transform: rotate(12deg) scale(1.15); }
+  .custom-cursor-flower { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; max-width: none; max-height: none; object-fit: contain; translate: -50% -50%; transition: opacity .2s ease, transform .28s ease; }
+  .custom-cursor-default { opacity: 1 !important; }
+  .custom-cursor-hand { opacity: 0 !important; }
+  .custom-cursor.is-active .custom-cursor-default { opacity: 0 !important; transform: scale(.9); }
+  .custom-cursor.is-active .custom-cursor-hand { opacity: 1 !important; transform: scale(1.08); }
 }
 .verification-input { display:flex; gap:8px; align-items:stretch; width:100%; min-width:0; }
+.admin-occasion-form { display:grid; grid-template-columns: 1fr 1.5fr 140px auto; gap:10px; margin:12px 0 18px; }
+.admin-occasion-form input, .admin-occasion-form select { min-height:38px; padding:9px 10px; border:1px solid var(--line); background:var(--paper); color:var(--ink); }
+.occasion-image-upload { display:grid; gap:4px; font-size:11px; color:var(--muted); }
+.occasion-image-upload input { min-height:auto; padding:6px; font-size:11px; }
+.admin-occasions-editor .section-heading { margin-bottom: 0; }
+@media (max-width: 760px) { .admin-occasion-form { grid-template-columns:1fr; } }
 .verification-input input { flex:1 1 auto; width:100%; min-width:0; }
 .verification-input .button { flex:0 0 110px; width:110px; white-space:nowrap; padding-inline:14px; }
 

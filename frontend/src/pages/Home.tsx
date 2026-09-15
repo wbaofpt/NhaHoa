@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Flower2, Leaf } from "lucide-react";
 import { useStore } from "../store";
@@ -10,10 +10,20 @@ import {
   Botanical,
 } from "../components";
 import { categories } from "../types";
+import { readOccasions, type OccasionCard } from "../occasionData";
 export default function Home() {
   const { products } = useStore();
   const [banner] = useState(() => { try { return JSON.parse(localStorage.getItem("nha-hoa-home-banner") || "{}"); } catch { return {}; } });
+  const [occasionCards, setOccasionCards] = useState<OccasionCard[]>(readOccasions);
+  const [showAllOccasions, setShowAllOccasions] = useState(false);
   const [category, setCategory] = useState("Tất cả");
+  useEffect(() => {
+    const refresh = () => setOccasionCards(readOccasions());
+    window.addEventListener("nha-hoa-occasions", refresh);
+    window.addEventListener("storage", refresh);
+    return () => { window.removeEventListener("nha-hoa-occasions", refresh); window.removeEventListener("storage", refresh); };
+  }, []);
+  const visibleOccasions = (showAllOccasions ? occasionCards : occasionCards.slice(0, 4)).map((item, index) => ({ item, index }));
   return (
     <>
       <section className="hero">
@@ -88,41 +98,24 @@ export default function Home() {
               Hoa cho những <em>khoảnh khắc.</em>
             </h2>
           </div>
-          <Link className="text-link" to="/bo-suu-tap">
-            Khám phá tất cả <ArrowUpRight size={17} />
-          </Link>
+          <button className="text-link" type="button" onClick={() => setShowAllOccasions((open) => !open)}>
+            {showAllOccasions ? "Thu gọn" : "Khám phá tất cả"} <ArrowUpRight size={17} />
+          </button>
         </div>
         <div className="occasion-grid">
-          {[
-            {
-              name: "Sinh nhật",
-              caption: "Thêm một tuổi, thêm niềm vui",
-              image: "pink",
-            },
-            { name: "Tình yêu", caption: "Thay lời muốn nói", image: "rose" },
-            {
-              name: "Chúc mừng",
-              caption: "Cho những khởi đầu rực rỡ",
-              image: "sunshine",
-            },
-            {
-              name: "Cảm ơn",
-              caption: "Gửi một chút chân thành",
-              image: "garden",
-            },
-          ].map((item, i) => (
+          {visibleOccasions.map(({ item, index }) => (
             <Link
-              className={"occasion-card occasion-" + i}
+              className={"occasion-card occasion-" + (index % 4)}
               key={item.name}
               to={"/hoa?dip=" + encodeURIComponent(item.name)}
             >
               <img
-                src={"/images/" + item.image + ".jpg"}
+                src={item.image.startsWith("data:") || item.image.startsWith("/") ? item.image : "/images/" + item.image + ".jpg"}
                 alt={"Hoa " + item.name.toLowerCase()}
                 loading="lazy"
               />
               <div>
-                <small>0{i + 1} / MỘT LỜI THƯƠNG</small>
+                <small>{String(index + 1).padStart(2, "0")} / MỘT LỜI THƯƠNG</small>
                 <h3>{item.name}</h3>
                 <p>{item.caption}</p>
               </div>

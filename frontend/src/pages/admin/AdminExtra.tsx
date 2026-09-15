@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { api, statuses, type Order, type Product } from "../../types";
 import { PageHeading, useConfirm } from "../../components";
+import { OCCASIONS_KEY, occasionDefaults, type OccasionCard } from "../../occasionData";
 export default function AdminExtra() {
   const confirm = useConfirm();
   const page = useLocation().pathname.split("/").pop();
@@ -19,6 +20,14 @@ export default function AdminExtra() {
     try { const value = JSON.parse(localStorage.getItem("nha-hoa-admin-settings") || "{}"); return { ...value, addresses: Array.isArray(value.addresses) ? value.addresses : value.address ? [value.address] : ["TP. Ho Chi Minh"] }; } catch { return { addresses: ["TP. Ho Chi Minh"], maintenance: false }; }
   });  const [saved, setSaved] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [occasionCards, setOccasionCards] = useState<OccasionCard[]>(() => {
+    try { const value = JSON.parse(localStorage.getItem(OCCASIONS_KEY) || "null"); return Array.isArray(value) && value.length ? value : occasionDefaults; } catch { return occasionDefaults; }
+  });
+  const [occasionEditing, setOccasionEditing] = useState<number | null>(null);
+  const [occasionDraft, setOccasionDraft] = useState<OccasionCard>({ name: "", caption: "", image: "pink" });
+  const handleOccasionImage = (file?: File) => { if (!file) return; const reader = new FileReader(); reader.onload = () => setOccasionDraft((draft) => ({ ...draft, image: String(reader.result) })); reader.readAsDataURL(file); };
+  const saveOccasions = (next: OccasionCard[]) => { setOccasionCards(next); localStorage.setItem(OCCASIONS_KEY, JSON.stringify(next)); window.dispatchEvent(new Event("nha-hoa-occasions")); };
+  const submitOccasion = (event: FormEvent) => { event.preventDefault(); if (!occasionDraft.name.trim() || !occasionDraft.caption.trim()) return; const next = occasionEditing === null ? [...occasionCards, { ...occasionDraft, name: occasionDraft.name.trim(), caption: occasionDraft.caption.trim() }] : occasionCards.map((item, index) => index === occasionEditing ? { ...occasionDraft, name: occasionDraft.name.trim(), caption: occasionDraft.caption.trim() } : item); saveOccasions(next); setOccasionEditing(null); setOccasionDraft({ name: "", caption: "", image: "pink" }); };
   const removeOrder = async (id: string) => {
     if (!(await confirm(`Xóa đơn ${id} khỏi lịch sử?`))) return;
     setDeleting(id);
@@ -152,32 +161,17 @@ export default function AdminExtra() {
                   {saved && <span className="form-success" role="status">&#x0110;&#x00E3; l&#x01B0;u</span>}
                 </div>
               </form>
-              <div className="settings-list">
-                <div>
-                  <strong>Khu vực giao</strong>
-                  <span>TP. Hồ Chí Minh</span>
-                </div>
-                <div>
-                  <strong>Phí giao tiêu chuẩn</strong>
-                  <span>35.000đ</span>
-                </div>
-                <div>
-                  <strong>Ngưỡng miễn phí</strong>
-                  <span>800.000đ</span>
-                </div>
-                <div>
-                  <strong>Thanh toán</strong>
-                  <span>COD · xác nhận thủ công</span>
-                </div>
-                <div>
-                  <strong>Ngưỡng cảnh báo tồn kho</strong>
-                  <span>Dưới 5 bó</span>
-                </div>
-              </div>
-              <p className="muted">
-                Các giá trị này được bảo vệ trong mã server; trang chỉ hiển thị
-                để tham chiếu.
-              </p>
+              <section className="help-panel admin-occasions-editor">
+                <div className="section-heading"><div><span className="eyebrow">NỘI DUNG TRANG CHỦ</span><h3>Dịp tặng hoa</h3></div><button className="button outline small" type="button" onClick={() => { setOccasionEditing(null); setOccasionDraft({ name: "", caption: "", image: "pink" }); }}>+ Thêm</button></div>
+                <form className="admin-occasion-form" onSubmit={submitOccasion}>
+                  <input aria-label="Tên dịp" placeholder="Tên dịp, ví dụ Sinh nhật" value={occasionDraft.name} onChange={(e) => setOccasionDraft({ ...occasionDraft, name: e.target.value })} required />
+                  <input aria-label="Mô tả dịp" placeholder="Mô tả ngắn" value={occasionDraft.caption} onChange={(e) => setOccasionDraft({ ...occasionDraft, caption: e.target.value })} required />
+                  <select aria-label="Ảnh dịp có sẵn" value={occasionDraft.image.startsWith("data:") ? "pink" : occasionDraft.image} onChange={(e) => setOccasionDraft({ ...occasionDraft, image: e.target.value })}><option value="pink">Hồng</option><option value="rose">Hoa hồng</option><option value="sunshine">Nắng vàng</option><option value="garden">Khu vườn</option></select>
+                  <label className="occasion-image-upload">Tải ảnh riêng<input type="file" accept="image/*" onChange={(e) => handleOccasionImage(e.target.files?.[0])} /></label>
+                  <button className="button small" type="submit">{occasionEditing === null ? "Thêm dịp" : "Lưu"}</button>
+                </form>
+                <div className="category-list">{occasionCards.map((item, index) => <div className="category-row" key={`${item.name}-${index}`}><span><strong>{item.name}</strong><small>{item.caption}</small></span><span><button className="button outline small" type="button" onClick={() => { setOccasionEditing(index); setOccasionDraft(item); }}>Sửa</button><button className="button outline small" type="button" onClick={() => saveOccasions(occasionCards.filter((_, i) => i !== index))}>Xóa</button></span></div>)}</div>
+              </section>
             </>
           ) : (
             <>
