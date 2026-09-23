@@ -17,7 +17,7 @@ Website bán hoa tiếng Việt sử dụng **React + TypeScript**, **Express + 
   </tr>
   <tr>
     <td align="center"><img src="docs/screenshots/login.png" alt="Đăng nhập Nhà Hoa" width="420"><br><sub>Đăng nhập</sub></td>
-    <td></td>
+    <td align="center"><img src="docs/screenshots/product-detail.png" alt="Chi tiết sản phẩm" width="420"><br><sub>Chi tiết sản phẩm</sub></td>
   </tr>
 </table>
 
