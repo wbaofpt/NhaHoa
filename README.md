@@ -4,16 +4,20 @@ Website bán hoa tiếng Việt sử dụng **React + TypeScript**, **Express + 
 
 ## Hình ảnh giao diện
 
-Các ảnh minh họa dưới đây sử dụng trực tiếp bộ ảnh giao diện trong `frontend/public/images`.
+Ảnh chụp trực tiếp từ các màn hình chính của ứng dụng ở độ rộng desktop.
 
 <table>
   <tr>
-    <td align="center"><img src="frontend/public/images/hero.jpg" alt="Trang chủ Nhà Hoa" width="420"><br><sub>Trang chủ</sub></td>
-    <td align="center"><img src="frontend/public/images/rose.jpg" alt="Cửa hàng hoa" width="420"><br><sub>Cửa hàng hoa</sub></td>
+    <td align="center"><img src="docs/screenshots/home.png" alt="Trang chủ Nhà Hoa" width="420"><br><sub>Trang chủ</sub></td>
+    <td align="center"><img src="docs/screenshots/shop.png" alt="Cửa hàng hoa" width="420"><br><sub>Cửa hàng hoa</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="frontend/public/images/pink.jpg" alt="Bộ sưu tập hoa" width="420"><br><sub>Bộ sưu tập</sub></td>
-    <td align="center"><img src="frontend/public/images/garden.jpg" alt="Nội dung Nhà Hoa" width="420"><br><sub>Nội dung thương hiệu</sub></td>
+    <td align="center"><img src="docs/screenshots/collections.png" alt="Bộ sưu tập hoa" width="420"><br><sub>Bộ sưu tập</sub></td>
+    <td align="center"><img src="docs/screenshots/services.png" alt="Dịch vụ Nhà Hoa" width="420"><br><sub>Dịch vụ</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/login.png" alt="Đăng nhập Nhà Hoa" width="420"><br><sub>Đăng nhập</sub></td>
+    <td></td>
   </tr>
 </table>
 
