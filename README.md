@@ -9,7 +9,7 @@ Website bán hoa tiếng Việt sử dụng **React + TypeScript**, **Express + 
 <table>
   <tr>
     <td align="center"><img src="docs/screenshots/home.png" alt="Trang chủ Nhà Hoa" width="420"><br><sub>Trang chủ</sub></td>
-    <td align="center"><img src="docs/screenshots/shop.png" alt="Cửa hàng hoa" width="420"><br><sub>Cửa hàng hoa</sub></td>
+    <td align="center"><img src="docs/screenshots/shop-database.png" alt="Cửa hàng hoa với sản phẩm từ MongoDB" width="420"><br><sub>Cửa hàng hoa · dữ liệu MongoDB</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/screenshots/collections.png" alt="Bộ sưu tập hoa" width="420"><br><sub>Bộ sưu tập</sub></td>
