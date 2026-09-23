@@ -2,6 +2,21 @@
 
 Website bán hoa tiếng Việt sử dụng **React + TypeScript**, **Express + TypeScript** và **MongoDB Atlas**. Giao diện kem/xanh lá trầm/hồng đất, logo SVG riêng, responsive và hỗ trợ reduced motion.
 
+## Hình ảnh giao diện
+
+Các ảnh minh họa dưới đây sử dụng trực tiếp bộ ảnh giao diện trong `frontend/public/images`.
+
+<table>
+  <tr>
+    <td align="center"><img src="frontend/public/images/hero.jpg" alt="Trang chủ Nhà Hoa" width="420"><br><sub>Trang chủ</sub></td>
+    <td align="center"><img src="frontend/public/images/rose.jpg" alt="Cửa hàng hoa" width="420"><br><sub>Cửa hàng hoa</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="frontend/public/images/pink.jpg" alt="Bộ sưu tập hoa" width="420"><br><sub>Bộ sưu tập</sub></td>
+    <td align="center"><img src="frontend/public/images/garden.jpg" alt="Nội dung Nhà Hoa" width="420"><br><sub>Nội dung thương hiệu</sub></td>
+  </tr>
+</table>
+
 ## Chạy dự án
 
 ```powershell
